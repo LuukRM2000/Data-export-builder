@@ -1,0 +1,58 @@
+{
+    "name": "luremo/craft-data-export-builder",
+    "description": "A visual export builder for Craft CMS that lets teams create reusable CSV and JSON exports from the Control Panel.",
+    "type": "craft-plugin",
+    "license": "proprietary",
+    "version": "1.0.0",
+    "keywords": [
+        "craftcms",
+        "craft-cms",
+        "plugin",
+        "exports",
+        "csv",
+        "json"
+    ],
+    "homepage": "https://github.com/luremo/craft-data-export-builder",
+    "support": {
+        "issues": "https://github.com/luremo/craft-data-export-builder/issues",
+        "source": "https://github.com/luremo/craft-data-export-builder"
+    },
+    "require": {
+        "php": "^8.2",
+        "craftcms/cms": "^5.0",
+        "ext-json": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Luremo\\DataExportBuilder\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Luremo\\DataExportBuilder\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --colors=always"
+    },
+    "extra": {
+        "name": "Data Export Builder",
+        "handle": "data-export-builder",
+        "class": "Luremo\\DataExportBuilder\\Plugin",
+        "description": "Build reusable CSV and JSON exports for Craft CMS without custom templates or one-off scripts.",
+        "developer": "Luremo",
+        "developerUrl": "https://github.com/luremo",
+        "documentationUrl": "https://github.com/luremo/craft-data-export-builder#readme",
+        "changelogUrl": "https://github.com/luremo/craft-data-export-builder/blob/main/CHANGELOG.md",
+        "pluginStoreUrl": "https://plugins.craftcms.com/data-export-builder"
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "craftcms/plugin-installer": true
+        }
+    }
+}

@@ -1,0 +1,210 @@
+.deb-page {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+    align-items: start;
+}
+
+.deb-main,
+.deb-sidebar {
+    display: grid;
+    gap: 24px;
+}
+
+.deb-card {
+    background: #fff;
+    border: 1px solid #e5ecf3;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(21, 34, 50, 0.06);
+    padding: 20px;
+}
+
+.deb-card__header {
+    margin-bottom: 18px;
+}
+
+.deb-card__header h2 {
+    margin: 0 0 6px;
+}
+
+.deb-card__header p {
+    margin: 0;
+    color: #5c6b7a;
+}
+
+.deb-form-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.deb-field-picker {
+    display: grid;
+    gap: 20px;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+}
+
+.deb-field-picker__panel {
+    display: grid;
+    gap: 14px;
+    align-content: start;
+}
+
+.deb-search-label,
+.deb-selected-header label {
+    font-weight: 600;
+}
+
+.deb-selected-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: center;
+}
+
+.deb-available-fields,
+.deb-selected-list {
+    display: grid;
+    gap: 12px;
+}
+
+.deb-available-group {
+    background: #f7f9fc;
+    border: 1px solid #e5ecf3;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.deb-available-group h3 {
+    margin: 0 0 12px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6d7e90;
+}
+
+.deb-available-group__list {
+    display: grid;
+    gap: 8px;
+}
+
+.deb-available-field {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid #d7e2ee;
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    text-align: left;
+}
+
+.deb-available-field:hover {
+    border-color: #1274d3;
+}
+
+.deb-available-field.is-selected {
+    opacity: 0.55;
+}
+
+.deb-available-field__label {
+    font-weight: 600;
+}
+
+.deb-selected-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border: 1px solid #d7e2ee;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.deb-selected-row__main,
+.deb-stack,
+.deb-run-list {
+    display: grid;
+    gap: 10px;
+}
+
+.deb-selected-path {
+    font-family: monospace;
+    font-size: 12px;
+    color: #4c6178;
+}
+
+.deb-selected-row__actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.deb-run-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 0;
+    border-top: 1px solid #edf2f7;
+}
+
+.deb-run-row:first-child {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.deb-run-status {
+    display: grid;
+    gap: 4px;
+    justify-items: start;
+}
+
+.deb-badge {
+    display: inline-flex;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.deb-badge--queued,
+.deb-badge--running {
+    background: #fff2cf;
+    color: #7d5e00;
+}
+
+.deb-badge--completed {
+    background: #daf4df;
+    color: #135b2a;
+}
+
+.deb-badge--failed {
+    background: #ffe1e1;
+    color: #8f1f1f;
+}
+
+.inline {
+    display: inline-block;
+}
+
+.fullwidth {
+    width: 100%;
+}
+
+.hidden {
+    display: none !important;
+}
+
+@media (max-width: 1024px) {
+    .deb-page,
+    .deb-field-picker {
+        grid-template-columns: 1fr;
+    }
+}

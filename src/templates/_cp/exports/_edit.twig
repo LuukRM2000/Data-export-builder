@@ -1,0 +1,182 @@
+{% extends "_layouts/cp" %}
+{% import "_includes/forms" as forms %}
+
+{% do view.registerAssetBundle('Luremo\\\\DataExportBuilder\\\\web\\\\assets\\\\cp\\\\CpAsset') %}
+
+{% set isNew = not template.id %}
+{% set title = isNew ? 'New Export Template' : template.name %}
+{% set selectedFields = template.getFieldsSorted() %}
+{% set queueThreshold = template.settings.queueThreshold ?? 1000 %}
+{% set sectionUid = template.filters.sectionUid ?? '' %}
+{% set siteUid = template.filters.siteUid ?? '' %}
+{% set dateFrom = template.filters.dateFrom ?? '' %}
+{% set dateTo = template.filters.dateTo ?? '' %}
+
+{% block actionButton %}
+    <a class="btn" href="{{ cpUrl('data-export-builder/exports') }}">Back to Exports</a>
+{% endblock %}
+
+{% block content %}
+    <div class="deb-page">
+        <div class="deb-main">
+            <form method="post" accept-charset="UTF-8">
+                {{ csrfInput() }}
+                {{ actionInput('data-export-builder/templates/save') }}
+                {{ hiddenInput('templateId', template.id) }}
+
+                {{ forms.textField({
+                    first: true,
+                    label: 'Name',
+                    instructions: 'A client-friendly label for the reusable export template.',
+                    id: 'name',
+                    name: 'name',
+                    required: true,
+                    value: template.name,
+                    errors: template.getErrors('name')
+                }) }}
+
+                {{ forms.textField({
+                    label: 'Handle',
+                    instructions: 'Used for file naming and future automation hooks.',
+                    id: 'handle',
+                    name: 'handle',
+                    required: true,
+                    value: template.handle,
+                    errors: template.getErrors('handle')
+                }) }}
+
+                <div class="deb-card">
+                    <div class="deb-card__header">
+                        <h2>Template Setup</h2>
+                        <p>Choose what this export targets and how it should run.</p>
+                    </div>
+
+                    <div class="deb-form-grid">
+                        {{ forms.selectField({
+                            label: 'Element Type',
+                            id: 'elementType',
+                            name: 'elementType',
+                            options: elementTypeOptions,
+                            value: template.elementType,
+                            instructions: 'Entries, users, categories, assets, and Commerce orders when available.'
+                        }) }}
+
+                        {{ forms.selectField({
+                            label: 'Output Format',
+                            id: 'format',
+                            name: 'format',
+                            options: [
+                                { label: 'CSV', value: 'csv' },
+                                { label: 'JSON', value: 'json' }
+                            ],
+                            value: template.format
+                        }) }}
+
+                        <div data-section-filter-row>
+                            {{ forms.selectField({
+                                label: 'Section Filter',
+                                id: 'sectionUid',
+                                name: 'filters[sectionUid]',
+                                options: fieldPayload.sections,
+                                value: sectionUid,
+                                instructions: 'Optional. Only applies to entry exports.'
+                            }) }}
+                        </div>
+
+                        <div data-site-filter-row>
+                            {{ forms.selectField({
+                                label: 'Site Filter',
+                                id: 'siteUid',
+                                name: 'filters[siteUid]',
+                                options: fieldPayload.sites,
+                                value: siteUid,
+                                instructions: 'Optional. Export from one site or all sites.'
+                            }) }}
+                        </div>
+
+                        {{ forms.dateField({
+                            label: 'Created From',
+                            id: 'dateFrom',
+                            name: 'filters[dateFrom]',
+                            value: dateFrom,
+                            instructions: 'Filter by element creation date.'
+                        }) }}
+
+                        {{ forms.dateField({
+                            label: 'Created To',
+                            id: 'dateTo',
+                            name: 'filters[dateTo]',
+                            value: dateTo
+                        }) }}
+
+                        {{ forms.textField({
+                            label: 'Queue Threshold',
+                            id: 'queueThreshold',
+                            name: 'settings[queueThreshold]',
+                            value: queueThreshold,
+                            type: 'number',
+                            instructions: 'Exports above this row count are pushed to the Craft queue.'
+                        }) }}
+                    </div>
+                </div>
+
+                {% include 'data-export-builder/_cp/exports/_includes/field-picker' with {
+                    fieldPayload: fieldPayload,
+                    selectedFields: selectedFields
+                } %}
+
+                {% if template.getErrors('fields') %}
+                    <p class="error">{{ template.getFirstError('fields') }}</p>
+                {% endif %}
+
+                <div class="buttons">
+                    <button type="submit" class="btn submit">Save Template</button>
+                </div>
+            </form>
+        </div>
+
+        <aside class="deb-sidebar">
+            <div class="deb-card">
+                <div class="deb-card__header">
+                    <h2>Run Export</h2>
+                    <p>Save first, then run on demand. Larger datasets queue automatically.</p>
+                </div>
+
+                {% if template.id %}
+                    <form method="post" action="{{ cpUrl('data-export-builder/exports/' ~ template.id ~ '/run') }}">
+                        {{ csrfInput() }}
+                        <button type="submit" class="btn submit fullwidth">Run Export</button>
+                    </form>
+                {% else %}
+                    <p class="light">Save this template to unlock export runs and download history.</p>
+                {% endif %}
+            </div>
+
+            {% if template.id %}
+                <div class="deb-card">
+                    <div class="deb-card__header">
+                        <h2>Template Actions</h2>
+                        <p>Useful lifecycle actions for agency handoff workflows.</p>
+                    </div>
+
+                    <div class="deb-stack">
+                        <form method="post" action="{{ cpUrl('data-export-builder/exports/' ~ template.id ~ '/duplicate') }}">
+                            {{ csrfInput() }}
+                            <button type="submit" class="btn fullwidth">Duplicate Template</button>
+                        </form>
+
+                        <form method="post" action="{{ cpUrl('data-export-builder/exports/' ~ template.id ~ '/delete') }}" onsubmit="return confirm('Delete this export template and its run history?');">
+                            {{ csrfInput() }}
+                            <button type="submit" class="btn fullwidth danger">Delete Template</button>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% include 'data-export-builder/_cp/exports/_includes/run-history' with {
+                template: template,
+                runs: runs
+            } %}
+        </aside>
+    </div>
+{% endblock %}

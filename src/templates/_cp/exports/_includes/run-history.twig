@@ -1,0 +1,40 @@
+<div class="deb-card">
+    <div class="deb-card__header">
+        <h2>Run History</h2>
+        <p>Completed exports stay available for later download. Failed runs retain error detail for debugging.</p>
+    </div>
+
+    {% if not template.id %}
+        <p class="light">Run history appears after the first saved export.</p>
+    {% elseif runs is empty %}
+        <p class="light">No export runs yet.</p>
+    {% else %}
+        <div class="deb-run-list">
+            {% for run in runs %}
+                <div class="deb-run-row">
+                    <div>
+                        <strong>{{ run.format|upper }}</strong>
+                        <div class="light">{{ run.dateCreated ? run.dateCreated|datetime('short') : 'Pending' }}</div>
+                    </div>
+
+                    <div class="deb-run-status">
+                        <span class="deb-badge deb-badge--{{ run.status }}">{{ run.status|title }}</span>
+                        {% if run.rowCount is not null %}
+                            <span class="light">{{ run.rowCount }} rows</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="rightalign">
+                        {% if run.status == 'completed' %}
+                            <a class="btn small" href="{{ cpUrl('data-export-builder/exports/' ~ template.id ~ '/download/' ~ run.id) }}">Download</a>
+                        {% elseif run.status == 'failed' and run.errorMessage %}
+                            <span class="error">{{ run.errorMessage }}</span>
+                        {% else %}
+                            <span class="light">Waiting</span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>

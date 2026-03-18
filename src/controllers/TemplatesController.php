@@ -31,6 +31,8 @@ final class TemplatesController extends Controller
 
     public function actionIndex(): Response
     {
+        Craft::$app->getView()->registerAssetBundle(CpAsset::class);
+
         return $this->renderTemplate('data-export-builder/_cp/exports/index', [
             'templates' => Plugin::$plugin->get('templates')->getAllTemplates(),
         ]);
@@ -50,7 +52,8 @@ final class TemplatesController extends Controller
 
         $fieldPayload = Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload(
             $template->elementType,
-            (string)($template->filters['sectionUid'] ?? '')
+            (string)($template->filters['sectionUid'] ?? ''),
+            false
         );
 
         return $this->renderTemplate('data-export-builder/_cp/exports/_edit', [
@@ -90,7 +93,8 @@ final class TemplatesController extends Controller
                 'template' => $template,
                 'fieldPayload' => Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload(
                     $template->elementType,
-                    (string)($template->filters['sectionUid'] ?? '')
+                    (string)($template->filters['sectionUid'] ?? ''),
+                    false
                 ),
                 'elementTypeOptions' => Plugin::$plugin->get('fieldDiscovery')->getElementTypeOptions(),
                 'runs' => $template->id ? Plugin::$plugin->get('templates')->getRunsForTemplate((int)$template->id) : [],

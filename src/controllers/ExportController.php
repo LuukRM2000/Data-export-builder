@@ -61,8 +61,9 @@ final class ExportController extends Controller
 
         $elementType = (string)Craft::$app->getRequest()->getRequiredQueryParam('elementType');
         $sectionUid = (string)Craft::$app->getRequest()->getQueryParam('sectionUid', '');
+        $onlyPopulated = Craft::$app->getRequest()->getQueryParam('onlyPopulated') === '1';
 
-        return $this->asJson(Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload($elementType, $sectionUid));
+        return $this->asJson(Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload($elementType, $sectionUid, $onlyPopulated));
     }
 
     private function enforcePermission(string $permission): void

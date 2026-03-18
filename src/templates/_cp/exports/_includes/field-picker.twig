@@ -11,11 +11,16 @@
         data-initial-payload="{{ fieldPayload|json_encode|e('html_attr') }}"
         data-element-select="#elementType"
         data-section-select="#sectionUid"
+        data-populated-toggle="[data-populated-toggle]"
         data-section-filter-target="[data-section-filter-row]"
         data-site-filter-target="[data-site-filter-row]"
     >
         <div class="deb-field-picker__panel">
             <label class="deb-search-label" for="deb-field-search">Available Fields</label>
+            <label class="checkboxfield light">
+                <input type="checkbox" data-populated-toggle>
+                <span>Only show filled fields</span>
+            </label>
             <input id="deb-field-search" class="text fullwidth" type="search" placeholder="Search fields, relations, Matrix paths..." data-field-search>
             <div class="deb-available-fields" data-available-fields></div>
         </div>

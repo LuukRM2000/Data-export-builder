@@ -194,6 +194,56 @@
     display: inline-block;
 }
 
+.deb-row-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.deb-btn {
+    border-radius: 999px;
+    border: 1px solid transparent;
+    font-weight: 700;
+    min-width: 64px;
+    justify-content: center;
+}
+
+.deb-btn--edit {
+    background: #e8f1fb;
+    border-color: #c6d9ee;
+    color: #214c75;
+}
+
+.deb-btn--edit:hover {
+    background: #dceafb;
+    color: #163955;
+}
+
+.deb-btn--run {
+    background: #5f6f82;
+    border-color: #5f6f82;
+    color: #fff;
+}
+
+.deb-btn--run:hover {
+    background: #4d5d6f;
+    border-color: #4d5d6f;
+}
+
+.deb-btn--danger {
+    background: #c94a4a;
+    border-color: #c94a4a;
+    color: #fff;
+}
+
+.deb-btn--danger:hover {
+    background: #ad3030;
+    border-color: #ad3030;
+}
+
 .fullwidth {
     width: 100%;
 }

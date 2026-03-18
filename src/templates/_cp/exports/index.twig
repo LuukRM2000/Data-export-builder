@@ -35,17 +35,19 @@
                             <td><span class="status green"></span>{{ template.format|upper }}</td>
                             <td>{{ template.lastRunAt ? template.lastRunAt|datetime('short') : 'Never' }}</td>
                             <td class="nowrap rightalign">
-                                <a class="btn small" href="{{ cpUrl('data-export-builder/exports/' ~ template.id) }}">Edit</a>
+                                <div class="deb-row-actions">
+                                <a class="btn small deb-btn deb-btn--edit" href="{{ cpUrl('data-export-builder/exports/' ~ template.id) }}">Edit</a>
                                 <form method="post" action="{{ cpUrl('data-export-builder/exports/' ~ template.id ~ '/run') }}" class="inline">
                                     {{ csrfInput() }}
-                                    <button type="submit" class="btn small secondary">Run</button>
+                                    <button type="submit" class="btn small deb-btn deb-btn--run">Run</button>
                                 </form>
                                 <form method="post" accept-charset="UTF-8" class="inline" onsubmit="return confirm('Delete this export template and its run history?');">
                                     {{ csrfInput() }}
                                     {{ actionInput('data-export-builder/templates/delete') }}
                                     {{ hiddenInput('templateId', template.id) }}
-                                    <button type="submit" class="btn small">Delete</button>
+                                    <button type="submit" class="btn small deb-btn deb-btn--danger">Delete</button>
                                 </form>
+                                </div>
                             </td>
                         </tr>
                     {% endfor %}

@@ -16,6 +16,18 @@
             .replace(/'/g, '&#039;');
     }
 
+    function compareGroups(a, b) {
+        if (a === 'Matrix' && b !== 'Matrix') {
+            return 1;
+        }
+
+        if (b === 'Matrix' && a !== 'Matrix') {
+            return -1;
+        }
+
+        return a.localeCompare(b);
+    }
+
     function getSelectedRows(root) {
         return Array.from(root.querySelectorAll('[data-selected-row]'));
     }
@@ -77,7 +89,7 @@
             groups[field.group].push(field);
         });
 
-        const html = Object.keys(groups).sort().map((group) => {
+        const html = Object.keys(groups).sort(compareGroups).map((group) => {
             const fields = groups[group].map((field) => {
                 const isSelected = selected.has(field.path);
                 return [
@@ -104,6 +116,7 @@
         const payload = root._payload || {};
         const sectionRow = document.querySelector(root.dataset.sectionFilterTarget || '');
         const siteRow = document.querySelector(root.dataset.siteFilterTarget || '');
+        const populatedToggle = root.querySelector(root.dataset.populatedToggle || '');
 
         if (sectionRow) {
             sectionRow.classList.toggle('hidden', !payload.supportsSectionFilter);
@@ -111,6 +124,14 @@
 
         if (siteRow) {
             siteRow.classList.toggle('hidden', !payload.supportsSiteFilter);
+        }
+
+        if (populatedToggle) {
+            populatedToggle.checked = !!payload.onlyPopulated;
+            populatedToggle.closest('label')?.classList.toggle('hidden', !payload.supportsPopulatedFilter);
+            if (!payload.supportsPopulatedFilter) {
+                populatedToggle.checked = false;
+            }
         }
     }
 
@@ -120,6 +141,10 @@
         const sectionSelect = document.querySelector(root.dataset.sectionSelect || '');
         if (sectionSelect && sectionSelect.value) {
             url.searchParams.set('sectionUid', sectionSelect.value);
+        }
+        const populatedToggle = root.querySelector(root.dataset.populatedToggle || '');
+        if (populatedToggle && populatedToggle.checked) {
+            url.searchParams.set('onlyPopulated', '1');
         }
 
         fetch(url.toString(), {
@@ -153,6 +178,14 @@
         const sectionSelect = document.querySelector(root.dataset.sectionSelect || '');
         if (sectionSelect) {
             sectionSelect.addEventListener('change', function () {
+                const currentElementType = elementSelect ? elementSelect.value : (root._payload?.elementType || 'entries');
+                loadPayload(root, currentElementType);
+            });
+        }
+
+        const populatedToggle = root.querySelector(root.dataset.populatedToggle || '');
+        if (populatedToggle) {
+            populatedToggle.addEventListener('change', function () {
                 const currentElementType = elementSelect ? elementSelect.value : (root._payload?.elementType || 'entries');
                 loadPayload(root, currentElementType);
             });

@@ -13,6 +13,7 @@ use craft\elements\Entry;
 use craft\elements\User;
 use craft\fields\BaseRelationField;
 use craft\fields\Matrix;
+use Luremo\DataExportBuilder\helpers\FieldValueHelper;
 use Luremo\DataExportBuilder\helpers\CapabilityHelper;
 
 final class FieldDiscoveryService extends Component
@@ -37,22 +38,26 @@ final class FieldDiscoveryService extends Component
     /**
      * @return array<string, mixed>
      */
-    public function getDiscoveryPayload(string $elementType, ?string $sectionUid = null): array
+    public function getDiscoveryPayload(string $elementType, ?string $sectionUid = null, bool $onlyPopulated = false): array
     {
+        $supportsPopulatedFilter = $elementType === 'entries' && $sectionUid !== null && $sectionUid !== '';
+
         return [
             'elementType' => $elementType,
-            'fields' => $this->discoverFields($elementType, $sectionUid),
+            'fields' => $this->discoverFields($elementType, $sectionUid, $onlyPopulated),
             'sections' => $elementType === 'entries' ? $this->getSectionOptions() : [],
             'sites' => $this->getSiteOptions(),
             'supportsSectionFilter' => $elementType === 'entries',
             'supportsSiteFilter' => in_array($elementType, ['entries', 'categories', 'assets'], true),
+            'supportsPopulatedFilter' => $supportsPopulatedFilter,
+            'onlyPopulated' => $supportsPopulatedFilter ? $onlyPopulated : false,
         ];
     }
 
     /**
      * @return array<int, array<string, string>>
      */
-    public function discoverFields(string $elementType, ?string $sectionUid = null): array
+    public function discoverFields(string $elementType, ?string $sectionUid = null, bool $onlyPopulated = false): array
     {
         $definitions = [];
 
@@ -72,6 +77,10 @@ final class FieldDiscoveryService extends Component
 
                 $this->appendCustomFieldDefinitions($definitions, $field);
             }
+        }
+
+        if ($onlyPopulated && $elementType === 'entries' && $sectionUid !== null && $sectionUid !== '') {
+            $definitions = $this->filterPopulatedDefinitions($definitions, $sectionUid);
         }
 
         ksort($definitions);
@@ -193,6 +202,53 @@ final class FieldDiscoveryService extends Component
         }
 
         return Craft::$app->getEntries()->getAllSections();
+    }
+
+    /**
+     * @param array<string, array<string, string>> $definitions
+     * @return array<string, array<string, string>>
+     */
+    private function filterPopulatedDefinitions(array $definitions, string $sectionUid): array
+    {
+        $section = Craft::$app->getEntries()->getSectionByUid($sectionUid);
+        if ($section === null) {
+            return $definitions;
+        }
+
+        $entries = Entry::find()
+            ->section($section->handle)
+            ->status(null)
+            ->site('*')
+            ->limit(50)
+            ->all();
+
+        if ($entries === []) {
+            return $definitions;
+        }
+
+        return array_filter($definitions, static function (array $definition) use ($entries): bool {
+            foreach ($entries as $entry) {
+                $value = FieldValueHelper::resolveFieldValue($entry, $definition['path'], 'csv');
+                if (self::hasDisplayValue($value)) {
+                    return true;
+                }
+            }
+
+            return false;
+        });
+    }
+
+    private static function hasDisplayValue(mixed $value): bool
+    {
+        if (is_string($value)) {
+            return trim($value) !== '';
+        }
+
+        if (is_array($value)) {
+            return $value !== [];
+        }
+
+        return $value !== null;
     }
 
     /**

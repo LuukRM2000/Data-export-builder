@@ -40,6 +40,12 @@
                                     {{ csrfInput() }}
                                     <button type="submit" class="btn small secondary">Run</button>
                                 </form>
+                                <form method="post" accept-charset="UTF-8" class="inline" onsubmit="return confirm('Delete this export template and its run history?');">
+                                    {{ csrfInput() }}
+                                    {{ actionInput('data-export-builder/templates/delete') }}
+                                    {{ hiddenInput('templateId', template.id) }}
+                                    <button type="submit" class="btn small">Delete</button>
+                                </form>
                             </td>
                         </tr>
                     {% endfor %}

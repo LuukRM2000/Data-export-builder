@@ -117,6 +117,10 @@
     function loadPayload(root, elementType) {
         const url = new URL(root.dataset.fieldsUrl, window.location.origin);
         url.searchParams.set('elementType', elementType);
+        const sectionSelect = document.querySelector(root.dataset.sectionSelect || '');
+        if (sectionSelect && sectionSelect.value) {
+            url.searchParams.set('sectionUid', sectionSelect.value);
+        }
 
         fetch(url.toString(), {
             headers: {
@@ -143,6 +147,14 @@
         if (elementSelect) {
             elementSelect.addEventListener('change', function () {
                 loadPayload(root, this.value);
+            });
+        }
+
+        const sectionSelect = document.querySelector(root.dataset.sectionSelect || '');
+        if (sectionSelect) {
+            sectionSelect.addEventListener('change', function () {
+                const currentElementType = elementSelect ? elementSelect.value : (root._payload?.elementType || 'entries');
+                loadPayload(root, currentElementType);
             });
         }
 

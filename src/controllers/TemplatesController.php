@@ -7,6 +7,7 @@ namespace Luremo\DataExportBuilder\controllers;
 use Craft;
 use craft\web\Controller;
 use Luremo\DataExportBuilder\Plugin;
+use Luremo\DataExportBuilder\web\assets\cp\CpAsset;
 use yii\web\ForbiddenHttpException;
 use yii\web\NotFoundHttpException;
 use yii\web\Response;
@@ -37,6 +38,8 @@ final class TemplatesController extends Controller
 
     public function actionEdit(?int $templateId = null): Response
     {
+        Craft::$app->getView()->registerAssetBundle(CpAsset::class);
+
         $template = $templateId
             ? Plugin::$plugin->get('templates')->getTemplateById($templateId)
             : Plugin::$plugin->get('templates')->createTemplateFromRequest([]);
@@ -45,7 +48,10 @@ final class TemplatesController extends Controller
             throw new NotFoundHttpException('Export template not found.');
         }
 
-        $fieldPayload = Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload($template->elementType);
+        $fieldPayload = Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload(
+            $template->elementType,
+            (string)($template->filters['sectionUid'] ?? '')
+        );
 
         return $this->renderTemplate('data-export-builder/_cp/exports/_edit', [
             'template' => $template,
@@ -77,11 +83,15 @@ final class TemplatesController extends Controller
         }
 
         if (!Plugin::$plugin->get('templates')->saveTemplate($template)) {
+            Craft::$app->getView()->registerAssetBundle(CpAsset::class);
             Craft::$app->getSession()->setError('Could not save export template.');
 
             return $this->renderTemplate('data-export-builder/_cp/exports/_edit', [
                 'template' => $template,
-                'fieldPayload' => Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload($template->elementType),
+                'fieldPayload' => Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload(
+                    $template->elementType,
+                    (string)($template->filters['sectionUid'] ?? '')
+                ),
                 'elementTypeOptions' => Plugin::$plugin->get('fieldDiscovery')->getElementTypeOptions(),
                 'runs' => $template->id ? Plugin::$plugin->get('templates')->getRunsForTemplate((int)$template->id) : [],
             ]);
@@ -92,9 +102,11 @@ final class TemplatesController extends Controller
         return $this->redirect('data-export-builder/exports/' . $template->id);
     }
 
-    public function actionDuplicate(int $templateId): Response
+    public function actionDuplicate(?int $templateId = null): Response
     {
         $this->requirePostRequest();
+
+        $templateId ??= (int)Craft::$app->getRequest()->getRequiredBodyParam('templateId');
 
         $template = Plugin::$plugin->get('templates')->getTemplateById($templateId);
         if ($template === null) {
@@ -107,9 +119,11 @@ final class TemplatesController extends Controller
         return $this->redirect('data-export-builder/exports/' . $duplicate->id);
     }
 
-    public function actionDelete(int $templateId): Response
+    public function actionDelete(?int $templateId = null): Response
     {
         $this->requirePostRequest();
+
+        $templateId ??= (int)Craft::$app->getRequest()->getRequiredBodyParam('templateId');
 
         Plugin::$plugin->get('templates')->deleteTemplate($templateId);
         Craft::$app->getSession()->setNotice('Export template deleted.');

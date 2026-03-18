@@ -18,7 +18,7 @@ final class ExportController extends Controller
     public function actionRun(int $templateId): Response
     {
         $this->requirePostRequest();
-        $this->requirePermission('runDataExports');
+        $this->enforcePermission('runDataExports');
 
         $template = Plugin::$plugin->get('templates')->getTemplateById($templateId);
         if ($template === null) {
@@ -36,7 +36,7 @@ final class ExportController extends Controller
 
     public function actionDownload(int $templateId, int $runId): Response
     {
-        $this->requirePermission('downloadDataExports');
+        $this->enforcePermission('downloadDataExports');
 
         $template = Plugin::$plugin->get('templates')->getTemplateById($templateId);
         $run = Plugin::$plugin->get('templates')->getRunById($runId);
@@ -57,14 +57,15 @@ final class ExportController extends Controller
     public function actionFields(): Response
     {
         $this->requireAcceptsJson();
-        $this->requirePermission('manageDataExports');
+        $this->enforcePermission('manageDataExports');
 
         $elementType = (string)Craft::$app->getRequest()->getRequiredQueryParam('elementType');
+        $sectionUid = (string)Craft::$app->getRequest()->getQueryParam('sectionUid', '');
 
-        return $this->asJson(Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload($elementType));
+        return $this->asJson(Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload($elementType, $sectionUid));
     }
 
-    private function requirePermission(string $permission): void
+    private function enforcePermission(string $permission): void
     {
         if (!Craft::$app->getUser()->checkPermission($permission)) {
             throw new ForbiddenHttpException('You do not have permission to perform this action.');

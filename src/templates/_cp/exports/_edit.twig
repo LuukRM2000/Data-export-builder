@@ -1,8 +1,6 @@
 {% extends "_layouts/cp" %}
 {% import "_includes/forms" as forms %}
 
-{% do view.registerAssetBundle('Luremo\\\\DataExportBuilder\\\\web\\\\assets\\\\cp\\\\CpAsset') %}
-
 {% set isNew = not template.id %}
 {% set title = isNew ? 'New Export Template' : template.name %}
 {% set selectedFields = template.getFieldsSorted() %}
@@ -120,6 +118,10 @@
                     </div>
                 </div>
 
+                <div class="buttons">
+                    <button type="submit" class="btn submit">Save Template</button>
+                </div>
+
                 {% include 'data-export-builder/_cp/exports/_includes/field-picker' with {
                     fieldPayload: fieldPayload,
                     selectedFields: selectedFields
@@ -129,9 +131,6 @@
                     <p class="error">{{ template.getFirstError('fields') }}</p>
                 {% endif %}
 
-                <div class="buttons">
-                    <button type="submit" class="btn submit">Save Template</button>
-                </div>
             </form>
         </div>
 
@@ -160,13 +159,17 @@
                     </div>
 
                     <div class="deb-stack">
-                        <form method="post" action="{{ cpUrl('data-export-builder/exports/' ~ template.id ~ '/duplicate') }}">
+                        <form method="post" accept-charset="UTF-8">
                             {{ csrfInput() }}
+                            {{ actionInput('data-export-builder/templates/duplicate') }}
+                            {{ hiddenInput('templateId', template.id) }}
                             <button type="submit" class="btn fullwidth">Duplicate Template</button>
                         </form>
 
-                        <form method="post" action="{{ cpUrl('data-export-builder/exports/' ~ template.id ~ '/delete') }}" onsubmit="return confirm('Delete this export template and its run history?');">
+                        <form method="post" accept-charset="UTF-8" onsubmit="return confirm('Delete this export template and its run history?');">
                             {{ csrfInput() }}
+                            {{ actionInput('data-export-builder/templates/delete') }}
+                            {{ hiddenInput('templateId', template.id) }}
                             <button type="submit" class="btn fullwidth danger">Delete Template</button>
                         </form>
                     </div>

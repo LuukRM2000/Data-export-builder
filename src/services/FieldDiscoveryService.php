@@ -37,11 +37,11 @@ final class FieldDiscoveryService extends Component
     /**
      * @return array<string, mixed>
      */
-    public function getDiscoveryPayload(string $elementType): array
+    public function getDiscoveryPayload(string $elementType, ?string $sectionUid = null): array
     {
         return [
             'elementType' => $elementType,
-            'fields' => $this->discoverFields($elementType),
+            'fields' => $this->discoverFields($elementType, $sectionUid),
             'sections' => $elementType === 'entries' ? $this->getSectionOptions() : [],
             'sites' => $this->getSiteOptions(),
             'supportsSectionFilter' => $elementType === 'entries',
@@ -52,7 +52,7 @@ final class FieldDiscoveryService extends Component
     /**
      * @return array<int, array<string, string>>
      */
-    public function discoverFields(string $elementType): array
+    public function discoverFields(string $elementType, ?string $sectionUid = null): array
     {
         $definitions = [];
 
@@ -60,7 +60,7 @@ final class FieldDiscoveryService extends Component
             $definitions[$field['path']] = $field;
         }
 
-        foreach ($this->fieldLayoutsForElementType($elementType) as $layout) {
+        foreach ($this->fieldLayoutsForElementType($elementType, $sectionUid) as $layout) {
             if ($layout === null || !method_exists($layout, 'getCustomFields')) {
                 continue;
             }
@@ -145,13 +145,14 @@ final class FieldDiscoveryService extends Component
     /**
      * @return array<int, mixed>
      */
-    private function fieldLayoutsForElementType(string $elementType): array
+    private function fieldLayoutsForElementType(string $elementType, ?string $sectionUid = null): array
     {
         $layouts = [];
 
         switch ($elementType) {
             case 'entries':
-                foreach (Craft::$app->getEntries()->getAllSections() as $section) {
+                $sections = $this->entrySectionsForUid($sectionUid);
+                foreach ($sections as $section) {
                     foreach ($section->getEntryTypes() as $entryType) {
                         $layouts[] = $entryType->getFieldLayout();
                     }
@@ -178,6 +179,20 @@ final class FieldDiscoveryService extends Component
         }
 
         return array_filter($layouts);
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function entrySectionsForUid(?string $sectionUid): array
+    {
+        if ($sectionUid !== null && $sectionUid !== '') {
+            $section = Craft::$app->getEntries()->getSectionByUid($sectionUid);
+
+            return $section !== null ? [$section] : [];
+        }
+
+        return Craft::$app->getEntries()->getAllSections();
     }
 
     /**

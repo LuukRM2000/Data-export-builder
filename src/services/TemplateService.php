@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Luremo\DataExportBuilder\services;
 
+use Craft;
 use craft\base\Component;
-use craft\db\Query;
 use craft\helpers\ArrayHelper;
 use Luremo\DataExportBuilder\models\ExportField;
 use Luremo\DataExportBuilder\models\ExportRun;
@@ -59,6 +59,10 @@ final class TemplateService extends Component
 
     public function getFailedRunCount(): int
     {
+        if (!Craft::$app->getDb()->tableExists('{{%dataexportbuilder_export_runs}}')) {
+            return 0;
+        }
+
         return (int)ExportRunRecord::find()->where(['status' => ExportRun::STATUS_FAILED])->count();
     }
 

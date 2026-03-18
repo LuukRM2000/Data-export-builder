@@ -12,10 +12,10 @@
         "csv",
         "json"
     ],
-    "homepage": "https://github.com/luremo/craft-data-export-builder",
+    "homepage": "https://github.com/LuukRM2000/Data-export-builder",
     "support": {
-        "issues": "https://github.com/luremo/craft-data-export-builder/issues",
-        "source": "https://github.com/luremo/craft-data-export-builder"
+        "issues": "https://github.com/LuukRM2000/Data-export-builder/issues",
+        "source": "https://github.com/LuukRM2000/Data-export-builder"
     },
     "require": {
         "php": "^8.2",
@@ -44,9 +44,9 @@
         "class": "Luremo\\DataExportBuilder\\Plugin",
         "description": "Build reusable CSV and JSON exports for Craft CMS without custom templates or one-off scripts.",
         "developer": "Luremo",
-        "developerUrl": "https://github.com/luremo",
-        "documentationUrl": "https://github.com/luremo/craft-data-export-builder#readme",
-        "changelogUrl": "https://github.com/luremo/craft-data-export-builder/blob/main/CHANGELOG.md",
+        "developerUrl": "https://github.com/LuukRM2000",
+        "documentationUrl": "https://github.com/LuukRM2000/Data-export-builder#readme",
+        "changelogUrl": "https://github.com/LuukRM2000/Data-export-builder/blob/main/CHANGELOG.md",
         "pluginStoreUrl": "https://plugins.craftcms.com/data-export-builder"
     },
     "config": {

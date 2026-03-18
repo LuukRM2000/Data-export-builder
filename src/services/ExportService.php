@@ -148,7 +148,7 @@ final class ExportService extends Component
         if ($template->elementType === 'entries' && method_exists($query, 'section')) {
             $sectionUid = (string)($template->filters['sectionUid'] ?? '');
             if ($sectionUid !== '') {
-                $section = Craft::$app->getSections()->getSectionByUid($sectionUid);
+                $section = Craft::$app->getEntries()->getSectionByUid($sectionUid);
                 if ($section !== null) {
                     $query->section($section->handle);
                 }

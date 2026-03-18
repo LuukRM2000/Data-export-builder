@@ -115,7 +115,7 @@ final class FieldDiscoveryService extends Component
     {
         $options = [['label' => 'All sections', 'value' => '']];
 
-        foreach (Craft::$app->getSections()->getAllSections() as $section) {
+        foreach (Craft::$app->getEntries()->getAllSections() as $section) {
             $options[] = [
                 'label' => $section->name,
                 'value' => $section->uid,
@@ -151,7 +151,7 @@ final class FieldDiscoveryService extends Component
 
         switch ($elementType) {
             case 'entries':
-                foreach (Craft::$app->getSections()->getAllSections() as $section) {
+                foreach (Craft::$app->getEntries()->getAllSections() as $section) {
                     foreach ($section->getEntryTypes() as $entryType) {
                         $layouts[] = $entryType->getFieldLayout();
                     }

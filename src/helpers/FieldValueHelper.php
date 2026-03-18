@@ -99,27 +99,6 @@ final class FieldValueHelper
             $context = $context->all();
         }
 
-        if ($context instanceof Traversable) {
-            $context = iterator_to_array($context, false);
-        }
-
-        if (is_array($context) && array_key_exists($segment, $context)) {
-            return $context[$segment];
-        }
-
-        if (is_array($context)) {
-            $filtered = array_values(array_filter($context, static fn(mixed $item): bool => self::matchesTypeHandle($item, $segment)));
-
-            if ($filtered !== []) {
-                return $filtered;
-            }
-
-            return array_values(array_map(
-                static fn(mixed $item): mixed => self::drillInto($item, $segment),
-                $context
-            ));
-        }
-
         if ($context instanceof ElementInterface) {
             if (self::elementHasCustomField($context, $segment)) {
                 return $context->getFieldValue($segment);
@@ -145,6 +124,27 @@ final class FieldValueHelper
             if (property_exists($context, $segment)) {
                 return $context->{$segment};
             }
+        }
+
+        if ($context instanceof Traversable) {
+            $context = iterator_to_array($context, false);
+        }
+
+        if (is_array($context) && array_key_exists($segment, $context)) {
+            return $context[$segment];
+        }
+
+        if (is_array($context)) {
+            $filtered = array_values(array_filter($context, static fn(mixed $item): bool => self::matchesTypeHandle($item, $segment)));
+
+            if ($filtered !== []) {
+                return $filtered;
+            }
+
+            return array_values(array_map(
+                static fn(mixed $item): mixed => self::drillInto($item, $segment),
+                $context
+            ));
         }
 
         return null;

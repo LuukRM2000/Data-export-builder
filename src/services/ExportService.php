@@ -155,8 +155,8 @@ final class ExportService extends Component
             }
         }
 
-        $dateFrom = $template->filters['dateFrom'] ?? null;
-        $dateTo = $template->filters['dateTo'] ?? null;
+        $dateFrom = $this->normalizeDateFilter($template->filters['dateFrom'] ?? null);
+        $dateTo = $this->normalizeDateFilter($template->filters['dateTo'] ?? null);
         if (($dateFrom || $dateTo) && method_exists($query, 'dateCreated')) {
             $range = [];
             if ($dateFrom) {
@@ -284,5 +284,69 @@ final class ExportService extends Component
         }
 
         return $row;
+    }
+
+    private function normalizeDateFilter(mixed $value): ?string
+    {
+        if (is_string($value)) {
+            return $this->normalizeDateString($value);
+        }
+
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $year = trim((string)($value['year'] ?? ''));
+        $month = trim((string)($value['month'] ?? ''));
+        $day = trim((string)($value['day'] ?? ''));
+
+        if ($year !== '' && $month !== '' && $day !== '') {
+            return sprintf('%04d-%02d-%02d', (int)$year, (int)$month, (int)$day);
+        }
+
+        foreach ($this->flattenScalarValues($value) as $candidate) {
+            $normalized = $this->normalizeDateString($candidate);
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeDateString(string $value): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
+            return $value;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(:\d{2})?$/', $value) === 1) {
+            return substr($value, 0, 10);
+        }
+
+        $timestamp = strtotime($value);
+
+        return $timestamp !== false ? date('Y-m-d', $timestamp) : null;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function flattenScalarValues(array $value): array
+    {
+        $results = [];
+
+        array_walk_recursive($value, static function (mixed $item) use (&$results): void {
+            if (is_scalar($item) || $item instanceof \Stringable) {
+                $results[] = (string)$item;
+            }
+        });
+
+        return $results;
     }
 }

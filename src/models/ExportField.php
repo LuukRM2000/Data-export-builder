@@ -26,7 +26,7 @@ final class ExportField extends Model
         ];
     }
 
-    public function toArray(array $fields = [], array $expand = [], bool $recursive = true): array
+    public function toArray(array $fields = [], array $expand = [], $recursive = true)
     {
         return [
             'id' => $this->id,

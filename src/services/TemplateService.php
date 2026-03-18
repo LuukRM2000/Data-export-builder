@@ -7,6 +7,7 @@ namespace Luremo\DataExportBuilder\services;
 use Craft;
 use craft\base\Component;
 use craft\helpers\ArrayHelper;
+use DateTimeInterface;
 use Luremo\DataExportBuilder\models\ExportField;
 use Luremo\DataExportBuilder\models\ExportRun;
 use Luremo\DataExportBuilder\models\ExportTemplate;
@@ -168,8 +169,8 @@ final class TemplateService extends Component
         $template->filters = [
             'sectionUid' => $payload['filters']['sectionUid'] ?? null,
             'siteUid' => $payload['filters']['siteUid'] ?? null,
-            'dateFrom' => $payload['filters']['dateFrom'] ?? null,
-            'dateTo' => $payload['filters']['dateTo'] ?? null,
+            'dateFrom' => $this->normalizeDateInput($payload['filters']['dateFrom'] ?? null),
+            'dateTo' => $this->normalizeDateInput($payload['filters']['dateTo'] ?? null),
         ];
         $template->settings = [
             'queueThreshold' => (int)($payload['settings']['queueThreshold'] ?? 1000),
@@ -260,12 +261,12 @@ final class TemplateService extends Component
             'fileName' => $record->fileName,
             'fileMimeType' => $record->fileMimeType,
             'storageType' => $record->storageType,
-            'startedAt' => $record->startedAt,
-            'finishedAt' => $record->finishedAt,
+            'startedAt' => $this->normalizeDateTimeValue($record->startedAt),
+            'finishedAt' => $this->normalizeDateTimeValue($record->finishedAt),
             'triggeredByUserId' => $record->triggeredByUserId !== null ? (int)$record->triggeredByUserId : null,
             'errorMessage' => $record->errorMessage,
-            'dateCreated' => $record->dateCreated,
-            'dateUpdated' => $record->dateUpdated,
+            'dateCreated' => $this->normalizeDateTimeValue($record->dateCreated),
+            'dateUpdated' => $this->normalizeDateTimeValue($record->dateUpdated),
         ]);
     }
 
@@ -274,5 +275,84 @@ final class TemplateService extends Component
         $handle = preg_replace('/[^a-zA-Z0-9_\\-]+/', '-', strtolower(trim($value))) ?: 'export-template';
 
         return trim($handle, '-');
+    }
+
+    private function normalizeDateInput(mixed $value): ?string
+    {
+        if (is_string($value)) {
+            return $this->normalizeDateString($value);
+        }
+
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $year = trim((string)($value['year'] ?? ''));
+        $month = trim((string)($value['month'] ?? ''));
+        $day = trim((string)($value['day'] ?? ''));
+
+        if ($year !== '' && $month !== '' && $day !== '') {
+            return sprintf('%04d-%02d-%02d', (int)$year, (int)$month, (int)$day);
+        }
+
+        foreach ($this->flattenScalarValues($value) as $candidate) {
+            $normalized = $this->normalizeDateString($candidate);
+            if ($normalized !== null) {
+                return $normalized;
+            }
+        }
+
+        return null;
+    }
+
+    private function normalizeDateString(string $value): ?string
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $value) === 1) {
+            return $value;
+        }
+
+        if (preg_match('/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}(:\d{2})?$/', $value) === 1) {
+            return substr($value, 0, 10);
+        }
+
+        $timestamp = strtotime($value);
+
+        return $timestamp !== false ? date('Y-m-d', $timestamp) : null;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function flattenScalarValues(array $value): array
+    {
+        $results = [];
+
+        array_walk_recursive($value, static function (mixed $item) use (&$results): void {
+            if (is_scalar($item) || $item instanceof \Stringable) {
+                $results[] = (string)$item;
+            }
+        });
+
+        return $results;
+    }
+
+    private function normalizeDateTimeValue(mixed $value): ?string
+    {
+        if ($value instanceof DateTimeInterface) {
+            return $value->format('Y-m-d H:i:s');
+        }
+
+        if (is_string($value)) {
+            $value = trim($value);
+
+            return $value !== '' ? $value : null;
+        }
+
+        return null;
     }
 }

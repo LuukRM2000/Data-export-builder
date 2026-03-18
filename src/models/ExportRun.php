@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Luremo\DataExportBuilder\models;
 
 use craft\base\Model;
+use DateTimeInterface;
 
 final class ExportRun extends Model
 {
@@ -23,12 +24,12 @@ final class ExportRun extends Model
     public ?string $fileName = null;
     public ?string $fileMimeType = null;
     public string $storageType = 'local';
-    public ?string $startedAt = null;
-    public ?string $finishedAt = null;
+    public string|DateTimeInterface|null $startedAt = null;
+    public string|DateTimeInterface|null $finishedAt = null;
     public ?int $triggeredByUserId = null;
     public ?string $errorMessage = null;
-    public ?string $dateCreated = null;
-    public ?string $dateUpdated = null;
+    public string|DateTimeInterface|null $dateCreated = null;
+    public string|DateTimeInterface|null $dateUpdated = null;
 
     protected function defineRules(): array
     {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Luremo\DataExportBuilder\helpers;
 
+use Craft;
 use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
@@ -17,6 +18,7 @@ final class CapabilityHelper
     public const FEATURE_COMMERCE_ORDERS = 'commerceOrders';
     public const FEATURE_ADVANCED_QUEUE = 'advancedQueue';
     public const ELEMENT_TYPE_WHEELFORM_SUBMISSIONS = 'wheelform-submissions';
+    public const ELEMENT_TYPE_FORMIE_SUBMISSIONS = 'formie-submissions';
 
     public static function getEdition(): string
     {
@@ -37,7 +39,16 @@ final class CapabilityHelper
 
     public static function isWheelFormInstalled(): bool
     {
-        return class_exists(\wheelform\db\Form::class) && class_exists(\wheelform\db\Message::class);
+        return class_exists(\wheelform\db\Form::class)
+            && class_exists(\wheelform\db\Message::class)
+            && self::isPluginEnabled('wheelform');
+    }
+
+    public static function isFormieInstalled(): bool
+    {
+        return class_exists(\verbb\formie\elements\Form::class)
+            && class_exists(\verbb\formie\elements\Submission::class)
+            && self::isPluginEnabled('formie');
     }
 
     public static function hasFeature(string $feature): bool
@@ -57,6 +68,10 @@ final class CapabilityHelper
 
         if ($handle === self::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS) {
             return self::isWheelFormInstalled();
+        }
+
+        if ($handle === self::ELEMENT_TYPE_FORMIE_SUBMISSIONS) {
+            return self::isFormieInstalled();
         }
 
         return in_array($handle, ['entries', 'users', 'categories', 'assets'], true);
@@ -85,6 +100,23 @@ final class CapabilityHelper
             ];
         }
 
+        if (self::supportsElementTypeHandle(self::ELEMENT_TYPE_FORMIE_SUBMISSIONS)) {
+            $types[self::ELEMENT_TYPE_FORMIE_SUBMISSIONS] = [
+                'label' => 'Formie Submissions',
+                'class' => \verbb\formie\elements\Submission::class,
+            ];
+        }
+
         return $types;
+    }
+
+    private static function isPluginEnabled(string $handle): bool
+    {
+        try {
+            $plugins = Craft::$app->getPlugins();
+            return $plugins->isPluginInstalled($handle) && $plugins->isPluginEnabled($handle);
+        } catch (\Throwable) {
+            return false;
+        }
     }
 }

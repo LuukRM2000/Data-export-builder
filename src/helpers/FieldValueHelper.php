@@ -9,6 +9,8 @@ use craft\elements\db\ElementQueryInterface;
 use DateTimeInterface;
 use Stringable;
 use Traversable;
+use verbb\formie\base\FieldValueInterface as FormieFieldValueInterface;
+use verbb\formie\elements\Submission as FormieSubmission;
 use wheelform\db\Message as WheelformMessage;
 use wheelform\db\MessageValue as WheelformMessageValue;
 use yii\base\BaseObject;
@@ -19,6 +21,10 @@ final class FieldValueHelper
 
     public static function resolveFieldValue(mixed $context, string $fieldPath, string $format = 'csv'): mixed
     {
+        if ($context instanceof FormieSubmission && self::formieSubmissionHasFieldPath($context, $fieldPath)) {
+            return self::normalizeResolvedValue($context->getFieldValue($fieldPath), $format);
+        }
+
         $segments = array_values(array_filter(explode('.', $fieldPath), static fn(string $segment): bool => $segment !== ''));
         $value = $context;
 
@@ -74,6 +80,19 @@ final class FieldValueHelper
             }, array_filter($normalized, static fn(mixed $item): bool => $item !== null && $item !== ''));
 
             return implode(', ', $flattened);
+        }
+
+        if ($value instanceof FormieFieldValueInterface) {
+            if ($format === 'json') {
+                return array_filter(
+                    get_object_vars($value),
+                    static fn(mixed $item): bool => $item !== null && $item !== '' && $item !== []
+                );
+            }
+
+            return $value instanceof Stringable
+                ? (string)$value
+                : (json_encode(get_object_vars($value), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '');
         }
 
         if ($value instanceof Stringable) {
@@ -157,6 +176,32 @@ final class FieldValueHelper
         }
 
         return null;
+    }
+
+    private static function formieSubmissionHasFieldPath(FormieSubmission $submission, string $fieldPath): bool
+    {
+        $firstSegment = explode('.', $fieldPath, 2)[0] ?? '';
+
+        if ($firstSegment === '') {
+            return false;
+        }
+
+        $form = $submission->getForm();
+        if ($form === null) {
+            return false;
+        }
+
+        foreach ($form->getPages() as $page) {
+            foreach ($page->getRows() as $row) {
+                foreach ($row->getFields() as $field) {
+                    if (($field->handle ?? null) === $firstSegment) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
     }
 
     private static function resolveWheelformMessageValue(WheelformMessage $message, string $segment): mixed

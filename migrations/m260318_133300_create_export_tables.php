@@ -6,7 +6,7 @@ namespace Luremo\DataExportBuilder\migrations;
 
 use craft\db\Migration;
 
-final class m0001_create_export_tables extends Migration
+final class m260318_133300_create_export_tables extends Migration
 {
     public function safeUp(): bool
     {

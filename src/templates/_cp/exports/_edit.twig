@@ -95,12 +95,12 @@
 
                         <div data-form-filter-row>
                             {{ forms.selectField({
-                                label: 'Wheel Form',
+                                label: fieldPayload.formLabel ?? 'Form',
                                 id: 'formId',
                                 name: 'filters[formId]',
                                 options: fieldPayload.forms ?? [],
                                 value: formId,
-                                instructions: 'Required for Wheel Form submission exports.'
+                                instructions: fieldPayload.formInstructions ?? 'Required for submission exports.'
                             }) }}
                         </div>
 

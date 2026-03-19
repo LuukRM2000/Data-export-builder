@@ -6,7 +6,7 @@ namespace Luremo\DataExportBuilder\migrations;
 
 use craft\db\Migration;
 
-final class m0002_add_indexes_and_constraints extends Migration
+final class m260318_133301_add_indexes_and_constraints extends Migration
 {
     public function safeUp(): bool
     {

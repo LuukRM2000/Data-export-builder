@@ -18,6 +18,8 @@ use Luremo\DataExportBuilder\models\ExportRun;
 use Luremo\DataExportBuilder\models\ExportTemplate;
 use Luremo\DataExportBuilder\Plugin;
 use Luremo\DataExportBuilder\records\ExportRunRecord;
+use verbb\formie\elements\Form as FormieForm;
+use verbb\formie\elements\Submission as FormieSubmission;
 use wheelform\db\Form as WheelformForm;
 use wheelform\db\Message as WheelformMessage;
 use yii\base\Exception;
@@ -62,7 +64,10 @@ final class ExportService extends Component
 
             $query = $this->buildSourceQuery($template);
             $total = $this->estimateRowCount($query);
-            if ($template->elementType !== CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS) {
+            if (!in_array($template->elementType, [
+                CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS,
+                CapabilityHelper::ELEMENT_TYPE_FORMIE_SUBMISSIONS,
+            ], true)) {
                 $eagerLoadPaths = Plugin::$plugin->get('fieldDiscovery')->getEagerLoadPaths(
                     array_map(static fn(ExportField $field): string => $field->fieldPath, $template->getFieldsSorted())
                 );
@@ -131,6 +136,10 @@ final class ExportService extends Component
     {
         if ($template->elementType === CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS) {
             return $this->buildWheelformMessageQuery($template);
+        }
+
+        if ($template->elementType === CapabilityHelper::ELEMENT_TYPE_FORMIE_SUBMISSIONS) {
+            return $this->buildFormieSubmissionQuery($template);
         }
 
         $supported = CapabilityHelper::supportedElementTypes();
@@ -387,6 +396,43 @@ final class ExportService extends Component
         $dateTo = $this->normalizeDateFilter($template->filters['dateTo'] ?? null);
         if ($dateTo !== null) {
             $query->andWhere(['<=', 'dateCreated', $dateTo . ' 23:59:59']);
+        }
+
+        return $query;
+    }
+
+    private function buildFormieSubmissionQuery(ExportTemplate $template): mixed
+    {
+        if (!CapabilityHelper::isFormieInstalled()) {
+            throw new Exception('Formie is not installed.');
+        }
+
+        $formId = (int)($template->filters['formId'] ?? 0);
+        if ($formId <= 0) {
+            throw new Exception('Select a Formie form before running this export.');
+        }
+
+        $form = FormieForm::find()->status(null)->id($formId)->one();
+        if ($form === null) {
+            throw new Exception(sprintf('Formie form %d could not be found.', $formId));
+        }
+
+        $query = FormieSubmission::find()
+            ->status(null)
+            ->formId($formId)
+            ->orderBy(['elements.dateCreated' => SORT_DESC, 'elements.id' => SORT_DESC]);
+
+        $dateFrom = $this->normalizeDateFilter($template->filters['dateFrom'] ?? null);
+        $dateTo = $this->normalizeDateFilter($template->filters['dateTo'] ?? null);
+        if (($dateFrom || $dateTo) && method_exists($query, 'dateCreated')) {
+            $range = [];
+            if ($dateFrom) {
+                $range[] = '>= ' . $dateFrom . ' 00:00:00';
+            }
+            if ($dateTo) {
+                $range[] = '<= ' . $dateTo . ' 23:59:59';
+            }
+            $query->dateCreated($range);
         }
 
         return $query;

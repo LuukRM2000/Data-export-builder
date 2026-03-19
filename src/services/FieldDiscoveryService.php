@@ -15,6 +15,16 @@ use craft\fields\BaseRelationField;
 use craft\fields\Matrix;
 use Luremo\DataExportBuilder\helpers\CapabilityHelper;
 use Luremo\DataExportBuilder\helpers\FieldValueHelper;
+use verbb\formie\base\CosmeticField as FormieCosmeticField;
+use verbb\formie\base\FieldInterface as FormieFieldInterface;
+use verbb\formie\base\MultiNestedFieldInterface as FormieMultiNestedFieldInterface;
+use verbb\formie\base\SingleNestedFieldInterface as FormieSingleNestedFieldInterface;
+use verbb\formie\elements\Form as FormieForm;
+use verbb\formie\fields\Date as FormieDateField;
+use verbb\formie\fields\Heading as FormieHeadingField;
+use verbb\formie\fields\Html as FormieHtmlField;
+use verbb\formie\fields\Section as FormieSectionField;
+use verbb\formie\fields\Summary as FormieSummaryField;
 use wheelform\db\Form as WheelformForm;
 use wheelform\db\FormField as WheelformFormField;
 
@@ -48,14 +58,19 @@ final class FieldDiscoveryService extends Component
     ): array
     {
         $supportsPopulatedFilter = $elementType === 'entries' && $sectionUid !== null && $sectionUid !== '';
-        $supportsFormFilter = $elementType === CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS;
+        $supportsFormFilter = in_array($elementType, [
+            CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS,
+            CapabilityHelper::ELEMENT_TYPE_FORMIE_SUBMISSIONS,
+        ], true);
 
         return [
             'elementType' => $elementType,
             'fields' => $this->discoverFields($elementType, $sectionUid, $onlyPopulated, $formId),
             'sections' => $elementType === 'entries' ? $this->getSectionOptions() : [],
             'sites' => $this->getSiteOptions(),
-            'forms' => $supportsFormFilter ? $this->getWheelformFormOptions() : [],
+            'forms' => $supportsFormFilter ? $this->getProviderFormOptions($elementType) : [],
+            'formLabel' => $supportsFormFilter ? $this->getProviderFormLabel($elementType) : 'Form',
+            'formInstructions' => $supportsFormFilter ? $this->getProviderFormInstructions($elementType) : '',
             'supportsSectionFilter' => $elementType === 'entries',
             'supportsSiteFilter' => in_array($elementType, ['entries', 'categories', 'assets'], true),
             'supportsFormFilter' => $supportsFormFilter,
@@ -102,7 +117,14 @@ final class FieldDiscoveryService extends Component
             $this->appendWheelformFieldDefinitions($definitions, $formId);
         }
 
-        if ($elementType !== CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS) {
+        if ($elementType === CapabilityHelper::ELEMENT_TYPE_FORMIE_SUBMISSIONS && $formId !== null && $formId > 0) {
+            $this->appendFormieFieldDefinitions($definitions, $formId);
+        }
+
+        if (!in_array($elementType, [
+            CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS,
+            CapabilityHelper::ELEMENT_TYPE_FORMIE_SUBMISSIONS,
+        ], true)) {
             ksort($definitions);
         }
 
@@ -199,6 +221,27 @@ final class FieldDiscoveryService extends Component
     }
 
     /**
+     * @return array<int, array{label:string,value:string}>
+     */
+    public function getFormieFormOptions(): array
+    {
+        $options = [['label' => 'Select a Formie Form', 'value' => '']];
+
+        if (!CapabilityHelper::isFormieInstalled()) {
+            return $options;
+        }
+
+        foreach (FormieForm::find()->status(null)->orderBy(['title' => SORT_ASC])->all() as $form) {
+            $options[] = [
+                'label' => (string)$form->title,
+                'value' => (string)$form->id,
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
      * @return array<int, mixed>
      */
     private function fieldLayoutsForElementType(string $elementType, ?string $sectionUid = null): array
@@ -233,6 +276,7 @@ final class FieldDiscoveryService extends Component
                     : null;
                 break;
             case CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS:
+            case CapabilityHelper::ELEMENT_TYPE_FORMIE_SUBMISSIONS:
                 break;
         }
 
@@ -311,6 +355,24 @@ final class FieldDiscoveryService extends Component
                 ['path' => 'formId', 'label' => 'Form ID', 'group' => 'Submission', 'type' => 'number'],
                 ['path' => 'read', 'label' => 'Read', 'group' => 'Submission', 'type' => 'boolean'],
                 ['path' => 'dateCreated', 'label' => 'Date Created', 'group' => 'Submission', 'type' => 'date'],
+            ];
+        }
+
+        if ($elementType === CapabilityHelper::ELEMENT_TYPE_FORMIE_SUBMISSIONS) {
+            return [
+                ['path' => 'id', 'label' => 'Submission ID', 'group' => 'Submission', 'type' => 'number'],
+                ['path' => 'formId', 'label' => 'Form ID', 'group' => 'Submission', 'type' => 'number'],
+                ['path' => 'status', 'label' => 'Status', 'group' => 'Submission', 'type' => 'text'],
+                ['path' => 'statusId', 'label' => 'Status ID', 'group' => 'Submission', 'type' => 'number'],
+                ['path' => 'userId', 'label' => 'User ID', 'group' => 'Submission', 'type' => 'number'],
+                ['path' => 'ipAddress', 'label' => 'IP Address', 'group' => 'Submission', 'type' => 'text'],
+                ['path' => 'isIncomplete', 'label' => 'Incomplete', 'group' => 'Submission', 'type' => 'boolean'],
+                ['path' => 'isSpam', 'label' => 'Spam', 'group' => 'Submission', 'type' => 'boolean'],
+                ['path' => 'spamReason', 'label' => 'Spam Reason', 'group' => 'Submission', 'type' => 'text'],
+                ['path' => 'dateCreated', 'label' => 'Date Created', 'group' => 'Submission', 'type' => 'date'],
+                ['path' => 'dateUpdated', 'label' => 'Date Updated', 'group' => 'Submission', 'type' => 'date'],
+                ['path' => 'form.title', 'label' => 'Form Title', 'group' => 'Form', 'type' => 'text'],
+                ['path' => 'form.handle', 'label' => 'Form Handle', 'group' => 'Form', 'type' => 'text'],
             ];
         }
 
@@ -404,6 +466,136 @@ final class FieldDiscoveryService extends Component
                 'type' => (string)$field->type,
             ];
         }
+    }
+
+    /**
+     * @param array<string, array<string, string>> $definitions
+     */
+    private function appendFormieFieldDefinitions(array &$definitions, int $formId): void
+    {
+        if (!CapabilityHelper::isFormieInstalled()) {
+            return;
+        }
+
+        $form = FormieForm::find()->status(null)->id($formId)->one();
+        if ($form === null) {
+            return;
+        }
+
+        foreach ($form->getPages() as $page) {
+            foreach ($page->getRows() as $row) {
+                foreach ($row->getFields() as $field) {
+                    if (!$field instanceof FormieFieldInterface) {
+                        continue;
+                    }
+
+                    $this->appendFormieFieldDefinition($definitions, $field);
+                }
+            }
+        }
+    }
+
+    /**
+     * @param array<string, array<string, string>> $definitions
+     */
+    private function appendFormieFieldDefinition(
+        array &$definitions,
+        FormieFieldInterface $field,
+        string $prefix = '',
+        string $labelPrefix = ''
+    ): void
+    {
+        if (!$this->isExportableFormieField($field)) {
+            return;
+        }
+
+        $path = ltrim($prefix . $field->handle, '.');
+        if ($path === '') {
+            return;
+        }
+
+        $definitions[$path] = [
+            'path' => $path,
+            'label' => $labelPrefix !== '' ? $labelPrefix . ' -> ' . (string)$field->label : (string)$field->label,
+            'group' => 'Form Fields',
+            'type' => 'field',
+        ];
+
+        if (!$this->shouldRecurseFormieField($field)) {
+            return;
+        }
+
+        foreach ($field->getFields() as $nestedField) {
+            if (!$nestedField instanceof FormieFieldInterface) {
+                continue;
+            }
+
+            $this->appendFormieFieldDefinition(
+                $definitions,
+                $nestedField,
+                $path . '.',
+                $labelPrefix !== '' ? $labelPrefix . ' -> ' . (string)$field->label : (string)$field->label
+            );
+        }
+    }
+
+    private function isExportableFormieField(FormieFieldInterface $field): bool
+    {
+        if ($field instanceof FormieCosmeticField) {
+            return false;
+        }
+
+        return !($field instanceof FormieHeadingField
+            || $field instanceof FormieHtmlField
+            || $field instanceof FormieSectionField
+            || $field instanceof FormieSummaryField);
+    }
+
+    private function shouldRecurseFormieField(FormieFieldInterface $field): bool
+    {
+        if ($field instanceof FormieMultiNestedFieldInterface) {
+            return false;
+        }
+
+        if (!$field instanceof FormieSingleNestedFieldInterface) {
+            return false;
+        }
+
+        if ($field instanceof FormieDateField) {
+            return in_array($field->displayType, ['dropdowns', 'inputs'], true);
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array<int, array{label:string,value:string}>
+     */
+    private function getProviderFormOptions(string $elementType): array
+    {
+        return match ($elementType) {
+            CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS => $this->getWheelformFormOptions(),
+            CapabilityHelper::ELEMENT_TYPE_FORMIE_SUBMISSIONS => $this->getFormieFormOptions(),
+            default => [],
+        };
+    }
+
+    private function getProviderFormLabel(string $elementType): string
+    {
+        return match ($elementType) {
+            CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS => 'Wheel Form',
+            CapabilityHelper::ELEMENT_TYPE_FORMIE_SUBMISSIONS => 'Formie Form',
+            default => 'Form',
+        };
+    }
+
+    private function getProviderFormInstructions(string $elementType): string
+    {
+        return match ($elementType) {
+            CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS => 'Required for Wheel Form submission exports.',
+            CapabilityHelper::ELEMENT_TYPE_FORMIE_SUBMISSIONS => 'Required for Formie submission exports.',
+            default => '',
+        };
     }
 
     /**

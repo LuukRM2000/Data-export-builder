@@ -53,7 +53,8 @@ final class TemplatesController extends Controller
         $fieldPayload = Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload(
             $template->elementType,
             (string)($template->filters['sectionUid'] ?? ''),
-            false
+            false,
+            isset($template->filters['formId']) ? (int)$template->filters['formId'] : null
         );
 
         return $this->renderTemplate('data-export-builder/_cp/exports/_edit', [
@@ -94,7 +95,8 @@ final class TemplatesController extends Controller
                 'fieldPayload' => Plugin::$plugin->get('fieldDiscovery')->getDiscoveryPayload(
                     $template->elementType,
                     (string)($template->filters['sectionUid'] ?? ''),
-                    false
+                    false,
+                    isset($template->filters['formId']) ? (int)$template->filters['formId'] : null
                 ),
                 'elementTypeOptions' => Plugin::$plugin->get('fieldDiscovery')->getElementTypeOptions(),
                 'runs' => $template->id ? Plugin::$plugin->get('templates')->getRunsForTemplate((int)$template->id) : [],

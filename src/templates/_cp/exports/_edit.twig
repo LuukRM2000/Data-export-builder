@@ -7,6 +7,7 @@
 {% set queueThreshold = template.settings.queueThreshold ?? 1000 %}
 {% set sectionUid = template.filters.sectionUid ?? '' %}
 {% set siteUid = template.filters.siteUid ?? '' %}
+{% set formId = template.filters.formId ?? '' %}
 {% set dateFrom = template.filters.dateFrom ?? '' %}
 {% set dateTo = template.filters.dateTo ?? '' %}
 
@@ -92,20 +93,52 @@
                             }) }}
                         </div>
 
-                        {{ forms.dateField({
-                            label: 'Created From',
-                            id: 'dateFrom',
-                            name: 'filters[dateFrom]',
-                            value: dateFrom,
-                            instructions: 'Filter by element creation date.'
-                        }) }}
+                        <div data-form-filter-row>
+                            {{ forms.selectField({
+                                label: 'Wheel Form',
+                                id: 'formId',
+                                name: 'filters[formId]',
+                                options: fieldPayload.forms ?? [],
+                                value: formId,
+                                instructions: 'Required for Wheel Form submission exports.'
+                            }) }}
+                        </div>
 
-                        {{ forms.dateField({
-                            label: 'Created To',
-                            id: 'dateTo',
-                            name: 'filters[dateTo]',
-                            value: dateTo
-                        }) }}
+                        <div class="field">
+                            <div class="heading">
+                                <label id="dateFrom-label" for="dateFrom">Created From</label>
+                            </div>
+                            <div class="instructions">
+                                <p>Optional. Filter by creation date.</p>
+                            </div>
+                            <div class="input">
+                                <input
+                                    class="text fullwidth"
+                                    type="date"
+                                    id="dateFrom"
+                                    name="filters[dateFrom]"
+                                    value="{{ dateFrom }}"
+                                >
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <div class="heading">
+                                <label id="dateTo-label" for="dateTo">Created To</label>
+                            </div>
+                            <div class="instructions">
+                                <p>Optional. Leave blank to include all dates.</p>
+                            </div>
+                            <div class="input">
+                                <input
+                                    class="text fullwidth"
+                                    type="date"
+                                    id="dateTo"
+                                    name="filters[dateTo]"
+                                    value="{{ dateTo }}"
+                                >
+                            </div>
+                        </div>
 
                         {{ forms.textField({
                             label: 'Queue Threshold',

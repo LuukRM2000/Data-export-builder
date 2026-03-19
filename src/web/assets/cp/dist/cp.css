@@ -38,6 +38,17 @@
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
 }
 
+.deb-form-grid > * {
+    min-width: 0;
+}
+
+.deb-form-grid .field,
+.deb-form-grid .select,
+.deb-form-grid select {
+    width: 100%;
+    max-width: 100%;
+}
+
 .deb-field-picker {
     display: grid;
     gap: 20px;

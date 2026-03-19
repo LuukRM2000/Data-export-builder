@@ -16,6 +16,7 @@ final class CapabilityHelper
 
     public const FEATURE_COMMERCE_ORDERS = 'commerceOrders';
     public const FEATURE_ADVANCED_QUEUE = 'advancedQueue';
+    public const ELEMENT_TYPE_WHEELFORM_SUBMISSIONS = 'wheelform-submissions';
 
     public static function getEdition(): string
     {
@@ -34,6 +35,11 @@ final class CapabilityHelper
         return class_exists(\craft\commerce\Plugin::class) && class_exists(\craft\commerce\elements\Order::class);
     }
 
+    public static function isWheelFormInstalled(): bool
+    {
+        return class_exists(\wheelform\db\Form::class) && class_exists(\wheelform\db\Message::class);
+    }
+
     public static function hasFeature(string $feature): bool
     {
         return match ($feature) {
@@ -49,11 +55,15 @@ final class CapabilityHelper
             return self::isCommerceInstalled() && self::hasFeature(self::FEATURE_COMMERCE_ORDERS);
         }
 
+        if ($handle === self::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS) {
+            return self::isWheelFormInstalled();
+        }
+
         return in_array($handle, ['entries', 'users', 'categories', 'assets'], true);
     }
 
     /**
-     * @return array<string, array{label:string,class:string}>
+     * @return array<string, array{label:string,class:string|null}>
      */
     public static function supportedElementTypes(): array
     {
@@ -66,6 +76,13 @@ final class CapabilityHelper
 
         if (self::supportsElementTypeHandle('orders')) {
             $types['orders'] = ['label' => 'Commerce Orders', 'class' => \craft\commerce\elements\Order::class];
+        }
+
+        if (self::supportsElementTypeHandle(self::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS)) {
+            $types[self::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS] = [
+                'label' => 'Wheel Form Submissions',
+                'class' => \wheelform\db\Message::class,
+            ];
         }
 
         return $types;

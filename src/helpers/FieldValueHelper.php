@@ -9,6 +9,8 @@ use craft\elements\db\ElementQueryInterface;
 use DateTimeInterface;
 use Stringable;
 use Traversable;
+use wheelform\db\Message as WheelformMessage;
+use wheelform\db\MessageValue as WheelformMessageValue;
 use yii\base\BaseObject;
 
 final class FieldValueHelper
@@ -99,6 +101,13 @@ final class FieldValueHelper
             $context = $context->all();
         }
 
+        if ($context instanceof WheelformMessage) {
+            $submissionValue = self::resolveWheelformMessageValue($context, $segment);
+            if ($submissionValue !== null) {
+                return $submissionValue;
+            }
+        }
+
         if ($context instanceof ElementInterface) {
             if (self::elementHasCustomField($context, $segment)) {
                 return $context->getFieldValue($segment);
@@ -148,6 +157,59 @@ final class FieldValueHelper
         }
 
         return null;
+    }
+
+    private static function resolveWheelformMessageValue(WheelformMessage $message, string $segment): mixed
+    {
+        return match ($segment) {
+            'formId' => $message->form_id,
+            default => self::resolveWheelformFieldValue($message, $segment),
+        };
+    }
+
+    private static function resolveWheelformFieldValue(WheelformMessage $message, string $segment): mixed
+    {
+        $values = $message->value ?? $message->getValue()->with('field')->all();
+        foreach ($values as $value) {
+            if (!$value instanceof WheelformMessageValue) {
+                continue;
+            }
+
+            $field = $value->field;
+            if ($field === null || (string)$field->name !== $segment) {
+                continue;
+            }
+
+            return self::extractWheelformValue($value);
+        }
+
+        return null;
+    }
+
+    private static function extractWheelformValue(WheelformMessageValue $value): mixed
+    {
+        $field = $value->field;
+        if ($field === null) {
+            return $value->value;
+        }
+
+        if ($field->type === \wheelform\db\FormField::FILE_SCENARIO) {
+            $file = json_decode((string)$value->value, true);
+
+            if (!is_array($file)) {
+                return (string)$value->value;
+            }
+
+            return (string)($file['assetUrl'] ?? $file['name'] ?? '');
+        }
+
+        if ($field->type === \wheelform\db\FormField::LIST_SCENARIO) {
+            $decoded = json_decode((string)$value->value, true);
+
+            return is_array($decoded) ? $decoded : (string)$value->value;
+        }
+
+        return $value->value;
     }
 
     private static function elementHasCustomField(ElementInterface $element, string $handle): bool

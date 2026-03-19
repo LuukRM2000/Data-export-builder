@@ -13,8 +13,10 @@ use craft\elements\Entry;
 use craft\elements\User;
 use craft\fields\BaseRelationField;
 use craft\fields\Matrix;
-use Luremo\DataExportBuilder\helpers\FieldValueHelper;
 use Luremo\DataExportBuilder\helpers\CapabilityHelper;
+use Luremo\DataExportBuilder\helpers\FieldValueHelper;
+use wheelform\db\Form as WheelformForm;
+use wheelform\db\FormField as WheelformFormField;
 
 final class FieldDiscoveryService extends Component
 {
@@ -38,17 +40,25 @@ final class FieldDiscoveryService extends Component
     /**
      * @return array<string, mixed>
      */
-    public function getDiscoveryPayload(string $elementType, ?string $sectionUid = null, bool $onlyPopulated = false): array
+    public function getDiscoveryPayload(
+        string $elementType,
+        ?string $sectionUid = null,
+        bool $onlyPopulated = false,
+        ?int $formId = null
+    ): array
     {
         $supportsPopulatedFilter = $elementType === 'entries' && $sectionUid !== null && $sectionUid !== '';
+        $supportsFormFilter = $elementType === CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS;
 
         return [
             'elementType' => $elementType,
-            'fields' => $this->discoverFields($elementType, $sectionUid, $onlyPopulated),
+            'fields' => $this->discoverFields($elementType, $sectionUid, $onlyPopulated, $formId),
             'sections' => $elementType === 'entries' ? $this->getSectionOptions() : [],
             'sites' => $this->getSiteOptions(),
+            'forms' => $supportsFormFilter ? $this->getWheelformFormOptions() : [],
             'supportsSectionFilter' => $elementType === 'entries',
             'supportsSiteFilter' => in_array($elementType, ['entries', 'categories', 'assets'], true),
+            'supportsFormFilter' => $supportsFormFilter,
             'supportsPopulatedFilter' => $supportsPopulatedFilter,
             'onlyPopulated' => $supportsPopulatedFilter ? $onlyPopulated : false,
         ];
@@ -57,7 +67,12 @@ final class FieldDiscoveryService extends Component
     /**
      * @return array<int, array<string, string>>
      */
-    public function discoverFields(string $elementType, ?string $sectionUid = null, bool $onlyPopulated = false): array
+    public function discoverFields(
+        string $elementType,
+        ?string $sectionUid = null,
+        bool $onlyPopulated = false,
+        ?int $formId = null
+    ): array
     {
         $definitions = [];
 
@@ -83,7 +98,13 @@ final class FieldDiscoveryService extends Component
             $definitions = $this->filterPopulatedDefinitions($definitions, $sectionUid);
         }
 
-        ksort($definitions);
+        if ($elementType === CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS && $formId !== null && $formId > 0) {
+            $this->appendWheelformFieldDefinitions($definitions, $formId);
+        }
+
+        if ($elementType !== CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS) {
+            ksort($definitions);
+        }
 
         return array_values($definitions);
     }
@@ -152,6 +173,32 @@ final class FieldDiscoveryService extends Component
     }
 
     /**
+     * @return array<int, array{label:string,value:string}>
+     */
+    public function getWheelformFormOptions(): array
+    {
+        $options = [['label' => 'Select a Wheel Form', 'value' => '']];
+
+        if (!CapabilityHelper::isWheelFormInstalled()) {
+            return $options;
+        }
+
+        foreach (
+            WheelformForm::find()
+                ->where(['active' => 1, 'save_entry' => 1])
+                ->orderBy(['name' => SORT_ASC])
+                ->all() as $form
+        ) {
+            $options[] = [
+                'label' => (string)$form->name,
+                'value' => (string)$form->id,
+            ];
+        }
+
+        return $options;
+    }
+
+    /**
      * @return array<int, mixed>
      */
     private function fieldLayoutsForElementType(string $elementType, ?string $sectionUid = null): array
@@ -184,6 +231,8 @@ final class FieldDiscoveryService extends Component
                 $layouts[] = method_exists(Craft::$app->getFields(), 'getLayoutByType')
                     ? Craft::$app->getFields()->getLayoutByType(\craft\commerce\elements\Order::class)
                     : null;
+                break;
+            case CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS:
                 break;
         }
 
@@ -256,6 +305,15 @@ final class FieldDiscoveryService extends Component
      */
     private function nativeFieldDefinitions(string $elementType): array
     {
+        if ($elementType === CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS) {
+            return [
+                ['path' => 'id', 'label' => 'Submission ID', 'group' => 'Submission', 'type' => 'number'],
+                ['path' => 'formId', 'label' => 'Form ID', 'group' => 'Submission', 'type' => 'number'],
+                ['path' => 'read', 'label' => 'Read', 'group' => 'Submission', 'type' => 'boolean'],
+                ['path' => 'dateCreated', 'label' => 'Date Created', 'group' => 'Submission', 'type' => 'date'],
+            ];
+        }
+
         $definitions = [
             ['path' => 'id', 'label' => 'ID', 'group' => 'Core', 'type' => 'number'],
             ['path' => 'uid', 'label' => 'UID', 'group' => 'Core', 'type' => 'text'],
@@ -317,6 +375,35 @@ final class FieldDiscoveryService extends Component
             ]),
             default => $definitions,
         };
+    }
+
+    /**
+     * @param array<string, array<string, string>> $definitions
+     */
+    private function appendWheelformFieldDefinitions(array &$definitions, int $formId): void
+    {
+        if (!CapabilityHelper::isWheelFormInstalled()) {
+            return;
+        }
+
+        $fields = WheelformFormField::find()
+            ->where(['form_id' => $formId, 'active' => 1])
+            ->orderBy(['order' => SORT_ASC])
+            ->all();
+
+        foreach ($fields as $field) {
+            $path = (string)$field->name;
+            if ($path === '') {
+                continue;
+            }
+
+            $definitions[$path] = [
+                'path' => $path,
+                'label' => (string)$field->getLabel(),
+                'group' => 'Form Fields',
+                'type' => (string)$field->type,
+            ];
+        }
     }
 
     /**

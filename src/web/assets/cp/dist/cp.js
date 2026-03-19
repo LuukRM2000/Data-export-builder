@@ -112,10 +112,42 @@
         target.innerHTML = html || '<p class="light">No matching fields for this element type.</p>';
     }
 
+    function syncSelectOptions(select, options, preferredValue) {
+        if (!select) {
+            return;
+        }
+
+        const currentValue = preferredValue ?? select.value;
+        const normalizedOptions = Array.isArray(options) ? options : [];
+        const hasCurrentValue = normalizedOptions.some((option) => String(option.value ?? '') === String(currentValue ?? ''));
+        const nextValue = hasCurrentValue ? String(currentValue ?? '') : String(normalizedOptions[0]?.value ?? '');
+
+        select.innerHTML = normalizedOptions.map((option) => {
+            const value = String(option.value ?? '');
+            const label = String(option.label ?? value);
+
+            return '<option value="' + escapeHtml(value) + '">' + escapeHtml(label) + '</option>';
+        }).join('');
+
+        select.value = nextValue;
+    }
+
+    function syncFilterOptions(root) {
+        const payload = root._payload || {};
+        const sectionSelect = document.querySelector(root.dataset.sectionSelect || '');
+        const siteSelect = document.querySelector(root.dataset.siteFilterTarget || '')?.querySelector('select');
+        const formSelect = document.querySelector(root.dataset.formSelect || '');
+
+        syncSelectOptions(sectionSelect, payload.sections || [], sectionSelect?.value);
+        syncSelectOptions(siteSelect, payload.sites || [], siteSelect?.value);
+        syncSelectOptions(formSelect, payload.forms || [], formSelect?.value);
+    }
+
     function updateFilterVisibility(root) {
         const payload = root._payload || {};
         const sectionRow = document.querySelector(root.dataset.sectionFilterTarget || '');
         const siteRow = document.querySelector(root.dataset.siteFilterTarget || '');
+        const formRow = document.querySelector(root.dataset.formFilterTarget || '');
         const populatedToggle = root.querySelector(root.dataset.populatedToggle || '');
 
         if (sectionRow) {
@@ -124,6 +156,10 @@
 
         if (siteRow) {
             siteRow.classList.toggle('hidden', !payload.supportsSiteFilter);
+        }
+
+        if (formRow) {
+            formRow.classList.toggle('hidden', !payload.supportsFormFilter);
         }
 
         if (populatedToggle) {
@@ -142,6 +178,10 @@
         if (sectionSelect && sectionSelect.value) {
             url.searchParams.set('sectionUid', sectionSelect.value);
         }
+        const formSelect = document.querySelector(root.dataset.formSelect || '');
+        if (formSelect && formSelect.value) {
+            url.searchParams.set('formId', formSelect.value);
+        }
         const populatedToggle = root.querySelector(root.dataset.populatedToggle || '');
         if (populatedToggle && populatedToggle.checked) {
             url.searchParams.set('onlyPopulated', '1');
@@ -157,6 +197,7 @@
             .then((response) => response.json())
             .then((payload) => {
                 root._payload = payload;
+                syncFilterOptions(root);
                 renderAvailableFields(root);
                 updateFilterVisibility(root);
             });
@@ -178,6 +219,14 @@
         const sectionSelect = document.querySelector(root.dataset.sectionSelect || '');
         if (sectionSelect) {
             sectionSelect.addEventListener('change', function () {
+                const currentElementType = elementSelect ? elementSelect.value : (root._payload?.elementType || 'entries');
+                loadPayload(root, currentElementType);
+            });
+        }
+
+        const formSelect = document.querySelector(root.dataset.formSelect || '');
+        if (formSelect) {
+            formSelect.addEventListener('change', function () {
                 const currentElementType = elementSelect ? elementSelect.value : (root._payload?.elementType || 'entries');
                 loadPayload(root, currentElementType);
             });

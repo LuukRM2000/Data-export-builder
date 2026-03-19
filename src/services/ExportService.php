@@ -18,6 +18,8 @@ use Luremo\DataExportBuilder\models\ExportRun;
 use Luremo\DataExportBuilder\models\ExportTemplate;
 use Luremo\DataExportBuilder\Plugin;
 use Luremo\DataExportBuilder\records\ExportRunRecord;
+use wheelform\db\Form as WheelformForm;
+use wheelform\db\Message as WheelformMessage;
 use yii\base\Exception;
 
 final class ExportService extends Component
@@ -27,7 +29,7 @@ final class ExportService extends Component
 
     public function runTemplate(ExportTemplate $template, int $userId): ExportRun
     {
-        $query = $this->buildElementQuery($template);
+        $query = $this->buildSourceQuery($template);
         $estimatedCount = $this->estimateRowCount($query);
         $run = $this->createRunRecord($template, $userId);
 
@@ -58,14 +60,16 @@ final class ExportService extends Component
             $runRecord->errorMessage = null;
             $runRecord->save(false);
 
-            $query = $this->buildElementQuery($template);
+            $query = $this->buildSourceQuery($template);
             $total = $this->estimateRowCount($query);
-            $eagerLoadPaths = Plugin::$plugin->get('fieldDiscovery')->getEagerLoadPaths(
-                array_map(static fn(ExportField $field): string => $field->fieldPath, $template->getFieldsSorted())
-            );
+            if ($template->elementType !== CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS) {
+                $eagerLoadPaths = Plugin::$plugin->get('fieldDiscovery')->getEagerLoadPaths(
+                    array_map(static fn(ExportField $field): string => $field->fieldPath, $template->getFieldsSorted())
+                );
 
-            if ($eagerLoadPaths !== [] && method_exists($query, 'with')) {
-                $query->with($eagerLoadPaths);
+                if ($eagerLoadPaths !== [] && method_exists($query, 'with')) {
+                    $query->with($eagerLoadPaths);
+                }
             }
 
             $filePath = ExportFileHelper::buildFilePath($template, new ExportRun(['id' => (int)$runRecord->id, 'format' => $template->format, 'templateId' => $template->id ?? 0]));
@@ -123,8 +127,12 @@ final class ExportService extends Component
         return json_encode($rows, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '[]';
     }
 
-    public function buildElementQuery(ExportTemplate $template): ElementQueryInterface
+    public function buildSourceQuery(ExportTemplate $template): mixed
     {
+        if ($template->elementType === CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS) {
+            return $this->buildWheelformMessageQuery($template);
+        }
+
         $supported = CapabilityHelper::supportedElementTypes();
         $elementClass = $supported[$template->elementType]['class'] ?? null;
 
@@ -184,13 +192,13 @@ final class ExportService extends Component
             ?? throw new Exception('Unable to create export run.');
     }
 
-    private function estimateRowCount(ElementQueryInterface $query): int
+    private function estimateRowCount(mixed $query): int
     {
         return (int)(clone $query)->count();
     }
 
     private function streamCsvExport(
-        ElementQueryInterface $query,
+        mixed $query,
         ExportTemplate $template,
         string $filePath,
         int $total,
@@ -223,7 +231,7 @@ final class ExportService extends Component
     }
 
     private function streamJsonExport(
-        ElementQueryInterface $query,
+        mixed $query,
         ExportTemplate $template,
         string $filePath,
         int $total,
@@ -348,5 +356,39 @@ final class ExportService extends Component
         });
 
         return $results;
+    }
+
+    private function buildWheelformMessageQuery(ExportTemplate $template): mixed
+    {
+        if (!CapabilityHelper::isWheelFormInstalled()) {
+            throw new Exception('Wheel Form is not installed.');
+        }
+
+        $formId = (int)($template->filters['formId'] ?? 0);
+        if ($formId <= 0) {
+            throw new Exception('Select a Wheel Form before running this export.');
+        }
+
+        $form = WheelformForm::findOne($formId);
+        if ($form === null) {
+            throw new Exception(sprintf('Wheel Form form %d could not be found.', $formId));
+        }
+
+        $query = WheelformMessage::find()
+            ->where(['form_id' => $formId])
+            ->with(['value.field', 'form'])
+            ->orderBy(['dateCreated' => SORT_DESC, 'id' => SORT_DESC]);
+
+        $dateFrom = $this->normalizeDateFilter($template->filters['dateFrom'] ?? null);
+        if ($dateFrom !== null) {
+            $query->andWhere(['>=', 'dateCreated', $dateFrom . ' 00:00:00']);
+        }
+
+        $dateTo = $this->normalizeDateFilter($template->filters['dateTo'] ?? null);
+        if ($dateTo !== null) {
+            $query->andWhere(['<=', 'dateCreated', $dateTo . ' 23:59:59']);
+        }
+
+        return $query;
     }
 }

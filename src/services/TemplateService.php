@@ -169,6 +169,7 @@ final class TemplateService extends Component
         $template->filters = [
             'sectionUid' => $payload['filters']['sectionUid'] ?? null,
             'siteUid' => $payload['filters']['siteUid'] ?? null,
+            'formId' => $this->normalizeIntegerInput($payload['filters']['formId'] ?? null),
             'dateFrom' => $this->normalizeDateInput($payload['filters']['dateFrom'] ?? null),
             'dateTo' => $this->normalizeDateInput($payload['filters']['dateTo'] ?? null),
         ];
@@ -354,5 +355,14 @@ final class TemplateService extends Component
         }
 
         return null;
+    }
+
+    private function normalizeIntegerInput(mixed $value): ?int
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return is_numeric($value) ? (int)$value : null;
     }
 }

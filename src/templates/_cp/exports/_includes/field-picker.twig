@@ -40,7 +40,8 @@
                             <input type="hidden" data-name="fieldPath" name="fields[{{ loop.index0 }}][fieldPath]" value="{{ field.fieldPath }}">
                             <input type="hidden" data-name="sortOrder" name="fields[{{ loop.index0 }}][sortOrder]" value="{{ field.sortOrder }}">
                             <div class="deb-selected-path">{{ field.fieldPath }}</div>
-                            <input class="text fullwidth" type="text" data-name="columnLabel" name="fields[{{ loop.index0 }}][columnLabel]" value="{{ field.columnLabel }}" placeholder="Column label">
+                            <label class="deb-selected-label">Export column title</label>
+                            <input class="text fullwidth" type="text" data-name="columnLabel" name="fields[{{ loop.index0 }}][columnLabel]" value="{{ field.columnLabel }}" placeholder="Custom column title">
                         </div>
 
                         <div class="deb-selected-row__actions">

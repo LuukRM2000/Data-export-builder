@@ -10,6 +10,7 @@ use craft\base\FieldInterface;
 use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
+use craft\elements\Tag;
 use craft\elements\User;
 use craft\fields\BaseRelationField;
 use craft\fields\Matrix;
@@ -72,7 +73,7 @@ final class FieldDiscoveryService extends Component
             'formLabel' => $supportsFormFilter ? $this->getProviderFormLabel($elementType) : 'Form',
             'formInstructions' => $supportsFormFilter ? $this->getProviderFormInstructions($elementType) : '',
             'supportsSectionFilter' => $elementType === 'entries',
-            'supportsSiteFilter' => in_array($elementType, ['entries', 'categories', 'assets'], true),
+            'supportsSiteFilter' => in_array($elementType, ['entries', 'categories', 'tags', 'assets'], true),
             'supportsFormFilter' => $supportsFormFilter,
             'supportsPopulatedFilter' => $supportsPopulatedFilter,
             'onlyPopulated' => $supportsPopulatedFilter ? $onlyPopulated : false,
@@ -265,6 +266,11 @@ final class FieldDiscoveryService extends Component
                     $layouts[] = $group->getFieldLayout();
                 }
                 break;
+            case 'tags':
+                foreach (Craft::$app->getTags()->getAllTagGroups() as $group) {
+                    $layouts[] = $group->getFieldLayout();
+                }
+                break;
             case 'assets':
                 foreach (Craft::$app->getVolumes()->getAllVolumes() as $volume) {
                     $layouts[] = $volume->getFieldLayout();
@@ -411,6 +417,13 @@ final class FieldDiscoveryService extends Component
                 ['path' => 'slug', 'label' => 'Slug', 'group' => 'Category', 'type' => 'text'],
                 ['path' => 'uri', 'label' => 'URI', 'group' => 'Category', 'type' => 'text'],
                 ['path' => 'group.handle', 'label' => 'Category Group Handle', 'group' => 'Meta', 'type' => 'text'],
+                ['path' => 'site.handle', 'label' => 'Site Handle', 'group' => 'Meta', 'type' => 'text'],
+            ]),
+            'tags' => array_merge($definitions, [
+                ['path' => 'title', 'label' => 'Title', 'group' => 'Tag', 'type' => 'text'],
+                ['path' => 'slug', 'label' => 'Slug', 'group' => 'Tag', 'type' => 'text'],
+                ['path' => 'uri', 'label' => 'URI', 'group' => 'Tag', 'type' => 'text'],
+                ['path' => 'group.handle', 'label' => 'Tag Group Handle', 'group' => 'Meta', 'type' => 'text'],
                 ['path' => 'site.handle', 'label' => 'Site Handle', 'group' => 'Meta', 'type' => 'text'],
             ]),
             'assets' => array_merge($definitions, [

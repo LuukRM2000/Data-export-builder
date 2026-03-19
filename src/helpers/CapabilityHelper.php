@@ -8,6 +8,7 @@ use Craft;
 use craft\elements\Asset;
 use craft\elements\Category;
 use craft\elements\Entry;
+use craft\elements\Tag;
 use craft\elements\User;
 
 final class CapabilityHelper
@@ -74,7 +75,7 @@ final class CapabilityHelper
             return self::isFormieInstalled();
         }
 
-        return in_array($handle, ['entries', 'users', 'categories', 'assets'], true);
+        return in_array($handle, ['entries', 'users', 'categories', 'tags', 'assets'], true);
     }
 
     /**
@@ -86,6 +87,7 @@ final class CapabilityHelper
             'entries' => ['label' => 'Entries', 'class' => Entry::class],
             'users' => ['label' => 'Users', 'class' => User::class],
             'categories' => ['label' => 'Categories', 'class' => Category::class],
+            'tags' => ['label' => 'Tags', 'class' => Tag::class],
             'assets' => ['label' => 'Assets', 'class' => Asset::class],
         ];
 

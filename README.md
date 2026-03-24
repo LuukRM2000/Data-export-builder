@@ -142,7 +142,10 @@ Suggested screenshots for release:
 
 ## Pricing
 
-See [docs/pricing-edition-notes.md](/Users/luukmolenbeek/Developer/Data-export-builder/docs/pricing-edition-notes.md).
+- Standard: $49
+- Pro: $99
+
+See [docs/pricing-edition-notes.md](/Users/luukmolenbeek/Developer/Data-export-builder/docs/pricing-edition-notes.md) for edition rationale and pricing direction after launch validation.
 
 ## Editions
 

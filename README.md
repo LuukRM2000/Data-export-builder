@@ -20,21 +20,6 @@ It is positioned for agencies, freelancers, and in-house Craft teams that repeat
 - deliver exports by email or webhook in Pro
 - archive exports to a Craft asset volume in Pro
 
-## Who It Is For
-
-- agencies delivering multiple Craft sites and recurring client reporting
-- freelancers who keep rebuilding export utilities for migrations and handoffs
-- in-house teams that need repeatable operational exports from the Control Panel
-- Commerce teams that need reusable order, catalog, and inventory exports
-
-## What It Is Not
-
-- not a BI suite
-- not an iPaaS or full integration platform
-- not a spreadsheet replacement
-
-The product wins by replacing repeated export scaffolding with a focused, reliable workflow inside Craft.
-
 ## Requirements
 
 - PHP 8.2+
@@ -143,12 +128,6 @@ Suggested screenshots for release:
 2. template builder with field picker
 3. run history with queued and completed exports
 4. Commerce order export example
-
-See [docs/release-readiness-checklist.md](/Users/luukmolenbeek/Developer/Data-export-builder/docs/release-readiness-checklist.md) for the Phase 1 launch checklist.
-
-## Manual QA Checklist
-
-See [docs/manual-qa-checklist.md](/Users/luukmolenbeek/Developer/Data-export-builder/docs/manual-qa-checklist.md).
 
 ## Support
 

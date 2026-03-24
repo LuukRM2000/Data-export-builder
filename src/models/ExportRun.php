@@ -42,7 +42,7 @@ final class ExportRun extends Model
                 self::STATUS_COMPLETED,
                 self::STATUS_FAILED,
             ]],
-            [['format'], 'in', 'range' => ['csv', 'json']],
+            [['format'], 'in', 'range' => ['csv', 'json', 'xlsx']],
             [['fileName'], 'string', 'max' => 255],
             [['fileMimeType'], 'string', 'max' => 100],
             [['filePath', 'errorMessage'], 'string'],

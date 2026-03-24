@@ -6,6 +6,7 @@ namespace Luremo\DataExportBuilder\controllers;
 
 use Craft;
 use craft\web\Controller;
+use Luremo\DataExportBuilder\helpers\CapabilityHelper;
 use Luremo\DataExportBuilder\Plugin;
 use Luremo\DataExportBuilder\web\assets\cp\CpAsset;
 use yii\web\ForbiddenHttpException;
@@ -60,8 +61,11 @@ final class TemplatesController extends Controller
         return $this->renderTemplate('data-export-builder/_cp/exports/_edit', [
             'template' => $template,
             'fieldPayload' => $fieldPayload,
+            'isProEdition' => CapabilityHelper::isProEdition(),
             'elementTypeOptions' => Plugin::$plugin->get('fieldDiscovery')->getElementTypeOptions(),
             'runs' => $template->id ? Plugin::$plugin->get('templates')->getRunsForTemplate($template->id) : [],
+            'volumeOptions' => Plugin::$plugin->get('deliveries')->getVolumeOptions(),
+            'nextScheduledRun' => Plugin::$plugin->get('schedules')->getNextRunDate($template),
         ]);
     }
 
@@ -98,8 +102,11 @@ final class TemplatesController extends Controller
                     false,
                     isset($template->filters['formId']) ? (int)$template->filters['formId'] : null
                 ),
+                'isProEdition' => CapabilityHelper::isProEdition(),
                 'elementTypeOptions' => Plugin::$plugin->get('fieldDiscovery')->getElementTypeOptions(),
                 'runs' => $template->id ? Plugin::$plugin->get('templates')->getRunsForTemplate((int)$template->id) : [],
+                'volumeOptions' => Plugin::$plugin->get('deliveries')->getVolumeOptions(),
+                'nextScheduledRun' => Plugin::$plugin->get('schedules')->getNextRunDate($template),
             ]);
         }
 

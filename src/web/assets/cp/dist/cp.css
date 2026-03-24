@@ -11,12 +11,50 @@
     gap: 24px;
 }
 
+.deb-editor-nav {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 12px 0 14px;
+}
+
+.deb-editor-nav__tab {
+    appearance: none;
+    border: 1px solid #d7e2ee;
+    border-radius: 999px;
+    background: #f4f8fc;
+    color: #4c6178;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 10px 16px;
+}
+
+.deb-editor-nav__tab.is-active {
+    background: #fff;
+    border-color: #1274d3;
+    color: #163955;
+    box-shadow: 0 8px 18px rgba(18, 116, 211, 0.12);
+}
+
+.deb-editor-panel {
+    display: grid;
+    gap: 24px;
+}
+
 .deb-card {
     background: #fff;
     border: 1px solid #e5ecf3;
     border-radius: 14px;
     box-shadow: 0 10px 30px rgba(21, 34, 50, 0.06);
     padding: 20px;
+}
+
+.deb-card--subtle {
+    border-color: #e8eef5;
+    box-shadow: none;
+    padding: 18px;
 }
 
 .deb-card__header {
@@ -27,6 +65,11 @@
     margin: 0 0 6px;
 }
 
+.deb-card__header h3 {
+    margin: 0 0 6px;
+    font-size: 18px;
+}
+
 .deb-card__header p {
     margin: 0;
     color: #5c6b7a;
@@ -35,18 +78,58 @@
 .deb-form-grid {
     display: grid;
     gap: 18px;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
 }
 
 .deb-form-grid > * {
+    display: grid;
+    align-content: start;
     min-width: 0;
+}
+
+.deb-form-grid .field {
+    display: grid;
+    grid-template-rows: auto minmax(62px, auto) auto;
+    align-content: start;
+    margin: 0 !important;
+}
+
+.deb-form-grid > * > .field,
+.deb-form-grid > * > .select {
+    margin: 0 !important;
+}
+
+.deb-form-grid .heading,
+.deb-form-grid .instructions {
+    margin-bottom: 0;
+}
+
+.deb-form-grid .instructions {
+    min-height: 62px;
+}
+
+.deb-form-grid .instructions p {
+    margin: 0;
+}
+
+.deb-form-grid .input {
+    align-self: end;
 }
 
 .deb-form-grid .field,
 .deb-form-grid .select,
-.deb-form-grid select {
+.deb-form-grid select,
+.deb-form-grid .input,
+.deb-form-grid .text {
     width: 100%;
     max-width: 100%;
+}
+
+.deb-card > .buttons {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
 }
 
 .deb-field-picker {
@@ -71,6 +154,18 @@
     justify-content: space-between;
     gap: 12px;
     align-items: center;
+}
+
+.deb-preset-list {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.deb-weekdays {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .deb-available-fields,
@@ -133,6 +228,7 @@
     border: 1px solid #d7e2ee;
     border-radius: 12px;
     background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    cursor: grab;
 }
 
 .deb-selected-row__main,
@@ -142,10 +238,51 @@
     gap: 10px;
 }
 
+.deb-selected-row__main {
+    cursor: grab;
+}
+
+.deb-selected-row.is-dragging {
+    opacity: 0.55;
+    cursor: grabbing;
+}
+
+.deb-selected-row.is-drop-target {
+    border-color: #1274d3;
+    box-shadow: 0 0 0 2px rgba(18, 116, 211, 0.14);
+}
+
+.deb-selected-path-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    cursor: grab;
+}
+
 .deb-selected-path {
     font-family: monospace;
     font-size: 12px;
     color: #4c6178;
+}
+
+.deb-drag-handle {
+    appearance: none;
+    border: 1px solid #d7e2ee;
+    border-radius: 8px;
+    background: #edf4fb;
+    color: #4c6178;
+    cursor: grab;
+    flex: 0 0 auto;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 7px 8px;
+    text-transform: uppercase;
+}
+
+.deb-drag-handle:active {
+    cursor: grabbing;
 }
 
 .deb-selected-label {
@@ -154,6 +291,7 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
     color: #6b7d90;
+    cursor: grab;
 }
 
 .deb-selected-row__actions {
@@ -161,6 +299,21 @@
     gap: 8px;
     flex-wrap: wrap;
     justify-content: flex-end;
+    align-self: start;
+}
+
+@media (max-width: 1100px) {
+    .deb-form-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 800px) {
+    .deb-form-grid,
+    .deb-field-picker,
+    .deb-page {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }
 
 .deb-run-row {
@@ -181,6 +334,12 @@
     display: grid;
     gap: 4px;
     justify-items: start;
+}
+
+.deb-run-error {
+    display: grid;
+    gap: 8px;
+    justify-items: end;
 }
 
 .deb-badge {

@@ -34,6 +34,23 @@ final class ExportController extends Controller
         return $this->redirect('data-export-builder/exports/' . $templateId);
     }
 
+    public function actionRetry(int $templateId, int $runId): Response
+    {
+        $this->requirePostRequest();
+        $this->enforcePermission('runDataExports');
+
+        $template = Plugin::$plugin->get('templates')->getTemplateById($templateId);
+        $run = Plugin::$plugin->get('templates')->getRunById($runId);
+        if ($template === null || $run === null || $run->templateId !== $templateId) {
+            throw new NotFoundHttpException('Export run not found.');
+        }
+
+        Plugin::$plugin->get('exports')->runTemplate($template, (int)Craft::$app->getUser()->getId(), true);
+        Craft::$app->getSession()->setNotice('Export retry queued.');
+
+        return $this->redirect('data-export-builder/exports/' . $templateId);
+    }
+
     public function actionDownload(int $templateId, int $runId): Response
     {
         $this->enforcePermission('downloadDataExports');

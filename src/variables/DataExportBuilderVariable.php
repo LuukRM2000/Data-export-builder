@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Luremo\DataExportBuilder\variables;
 
 use Luremo\DataExportBuilder\helpers\CapabilityHelper;
+use Luremo\DataExportBuilder\Plugin;
 
 final class DataExportBuilderVariable
 {
@@ -16,5 +17,10 @@ final class DataExportBuilderVariable
     public function commerceEnabled(): bool
     {
         return CapabilityHelper::supportsElementTypeHandle('orders');
+    }
+
+    public function isPro(): bool
+    {
+        return isset(Plugin::$plugin) && Plugin::$plugin->is(Plugin::EDITION_PRO);
     }
 }

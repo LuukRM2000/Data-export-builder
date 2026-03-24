@@ -10,27 +10,33 @@ use craft\elements\Category;
 use craft\elements\Entry;
 use craft\elements\Tag;
 use craft\elements\User;
+use Luremo\DataExportBuilder\Plugin;
 
 final class CapabilityHelper
 {
-    public const EDITION_LITE = 'lite';
-    public const EDITION_PRO = 'pro';
-
     public const FEATURE_COMMERCE_ORDERS = 'commerceOrders';
     public const FEATURE_ADVANCED_QUEUE = 'advancedQueue';
     public const ELEMENT_TYPE_WHEELFORM_SUBMISSIONS = 'wheelform-submissions';
     public const ELEMENT_TYPE_FORMIE_SUBMISSIONS = 'formie-submissions';
+    public const ELEMENT_TYPE_PRODUCTS = 'products';
+    public const ELEMENT_TYPE_VARIANTS = 'variants';
 
     public static function getEdition(): string
     {
-        $edition = strtolower((string)(getenv('DATA_EXPORT_BUILDER_EDITION') ?: self::EDITION_PRO));
+        if (isset(Plugin::$plugin)) {
+            foreach (array_reverse(Plugin::editions()) as $edition) {
+                if (Plugin::$plugin->is($edition)) {
+                    return $edition;
+                }
+            }
+        }
 
-        return in_array($edition, [self::EDITION_LITE, self::EDITION_PRO], true) ? $edition : self::EDITION_PRO;
+        return Plugin::EDITION_STANDARD;
     }
 
     public static function isProEdition(): bool
     {
-        return self::getEdition() === self::EDITION_PRO;
+        return isset(Plugin::$plugin) && Plugin::$plugin->is(Plugin::EDITION_PRO);
     }
 
     public static function isCommerceInstalled(): bool
@@ -63,7 +69,7 @@ final class CapabilityHelper
 
     public static function supportsElementTypeHandle(string $handle): bool
     {
-        if ($handle === 'orders') {
+        if (in_array($handle, ['orders', self::ELEMENT_TYPE_PRODUCTS, self::ELEMENT_TYPE_VARIANTS], true)) {
             return self::isCommerceInstalled() && self::hasFeature(self::FEATURE_COMMERCE_ORDERS);
         }
 
@@ -93,6 +99,8 @@ final class CapabilityHelper
 
         if (self::supportsElementTypeHandle('orders')) {
             $types['orders'] = ['label' => 'Commerce Orders', 'class' => \craft\commerce\elements\Order::class];
+            $types[self::ELEMENT_TYPE_PRODUCTS] = ['label' => 'Commerce Products', 'class' => \craft\commerce\elements\Product::class];
+            $types[self::ELEMENT_TYPE_VARIANTS] = ['label' => 'Commerce Variants', 'class' => \craft\commerce\elements\Variant::class];
         }
 
         if (self::supportsElementTypeHandle(self::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS)) {

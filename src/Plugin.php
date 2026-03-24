@@ -11,14 +11,19 @@ use craft\events\RegisterUserPermissionsEvent;
 use craft\events\RegisterUrlRulesEvent;
 use craft\services\UserPermissions;
 use Luremo\DataExportBuilder\services\DownloadService;
+use Luremo\DataExportBuilder\services\DeliveryService;
 use Luremo\DataExportBuilder\services\ExportService;
 use Luremo\DataExportBuilder\services\FieldDiscoveryService;
+use Luremo\DataExportBuilder\services\PresetService;
+use Luremo\DataExportBuilder\services\ScheduleService;
 use Luremo\DataExportBuilder\services\TemplateService;
 use yii\base\Event;
 
 final class Plugin extends BasePlugin
 {
     public const TRANSLATION_CATEGORY = 'data-export-builder';
+    public const EDITION_STANDARD = 'standard';
+    public const EDITION_PRO = 'pro';
 
     public static Plugin $plugin;
 
@@ -38,11 +43,22 @@ final class Plugin extends BasePlugin
             'exports' => ExportService::class,
             'fieldDiscovery' => FieldDiscoveryService::class,
             'downloads' => DownloadService::class,
+            'deliveries' => DeliveryService::class,
+            'schedules' => ScheduleService::class,
+            'presets' => PresetService::class,
         ]);
 
         $this->registerTemplateRoots();
         $this->registerCpRoutes();
         $this->registerPermissions();
+    }
+
+    public static function editions(): array
+    {
+        return [
+            self::EDITION_STANDARD,
+            self::EDITION_PRO,
+        ];
     }
 
     public function getCpNavItem(): array
@@ -80,6 +96,7 @@ final class Plugin extends BasePlugin
                 $event->rules['data-export-builder/exports/<templateId:\d+>'] = 'data-export-builder/templates/edit';
                 $event->rules['data-export-builder/exports/<templateId:\d+>/download/<runId:\d+>'] = 'data-export-builder/export/download';
                 $event->rules['data-export-builder/exports/<templateId:\d+>/run'] = 'data-export-builder/export/run';
+                $event->rules['data-export-builder/exports/<templateId:\d+>/retry/<runId:\d+>'] = 'data-export-builder/export/retry';
                 $event->rules['data-export-builder/exports/fields'] = 'data-export-builder/export/fields';
                 $event->rules['data-export-builder/exports/<templateId:\d+>/duplicate'] = 'data-export-builder/templates/duplicate';
                 $event->rules['data-export-builder/exports/<templateId:\d+>/delete'] = 'data-export-builder/templates/delete';

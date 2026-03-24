@@ -9,6 +9,7 @@ use craft\base\Component;
 use craft\base\ElementInterface;
 use craft\elements\db\ElementQueryInterface;
 use craft\helpers\Db;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Luremo\DataExportBuilder\helpers\CapabilityHelper;
 use Luremo\DataExportBuilder\helpers\ExportFileHelper;
 use Luremo\DataExportBuilder\helpers\FieldValueHelper;
@@ -18,6 +19,8 @@ use Luremo\DataExportBuilder\models\ExportRun;
 use Luremo\DataExportBuilder\models\ExportTemplate;
 use Luremo\DataExportBuilder\Plugin;
 use Luremo\DataExportBuilder\records\ExportRunRecord;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use verbb\formie\elements\Form as FormieForm;
 use verbb\formie\elements\Submission as FormieSubmission;
 use wheelform\db\Form as WheelformForm;
@@ -29,13 +32,13 @@ final class ExportService extends Component
     private int $defaultQueueThreshold = 1000;
     private int $batchSize = 200;
 
-    public function runTemplate(ExportTemplate $template, int $userId): ExportRun
+    public function runTemplate(ExportTemplate $template, ?int $userId, bool $forceQueue = false): ExportRun
     {
         $query = $this->buildSourceQuery($template);
         $estimatedCount = $this->estimateRowCount($query);
         $run = $this->createRunRecord($template, $userId);
 
-        if ($this->shouldQueueForCount($template, $estimatedCount)) {
+        if ($forceQueue || $this->shouldQueueForCount($template, $estimatedCount)) {
             Craft::$app->getQueue()->push(new RunExportJob(['runId' => $run->id]));
 
             return $run;
@@ -78,15 +81,32 @@ final class ExportService extends Component
             }
 
             $filePath = ExportFileHelper::buildFilePath($template, new ExportRun(['id' => (int)$runRecord->id, 'format' => $template->format, 'templateId' => $template->id ?? 0]));
-            $rowCount = $template->format === 'json'
-                ? $this->streamJsonExport($query, $template, $filePath, $total, $progressCallback)
-                : $this->streamCsvExport($query, $template, $filePath, $total, $progressCallback);
+            $rowCount = match ($template->format) {
+                'json' => $this->streamJsonExport($query, $template, $filePath, $total, $progressCallback),
+                'xlsx' => $this->streamXlsxExport($query, $template, $filePath, $total, $progressCallback),
+                default => $this->streamCsvExport($query, $template, $filePath, $total, $progressCallback),
+            };
 
             $runRecord->status = ExportRun::STATUS_COMPLETED;
             $runRecord->rowCount = $rowCount;
             $runRecord->filePath = $filePath;
             $runRecord->fileName = basename($filePath);
             $runRecord->fileMimeType = ExportFileHelper::fileMimeType($template->format);
+            $deliveryResult = Plugin::$plugin->get('deliveries')->deliverRun($template, new ExportRun([
+                'id' => (int)$runRecord->id,
+                'templateId' => $template->id ?? 0,
+                'status' => ExportRun::STATUS_COMPLETED,
+                'format' => $template->format,
+                'rowCount' => $rowCount,
+                'filePath' => $filePath,
+                'fileName' => basename($filePath),
+                'fileMimeType' => ExportFileHelper::fileMimeType($template->format),
+            ]));
+            $runRecord->storageType = $deliveryResult['storageType'];
+            if (!$deliveryResult['keepLocalCopy'] && is_file($filePath)) {
+                unlink($filePath);
+                $runRecord->filePath = null;
+            }
             $runRecord->finishedAt = Db::prepareDateForDb(new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
             $runRecord->save(false);
 
@@ -172,6 +192,13 @@ final class ExportService extends Component
             }
         }
 
+        if ($template->elementType === CapabilityHelper::ELEMENT_TYPE_PRODUCTS && method_exists($query, 'type')) {
+            $productTypeHandle = (string)($template->filters['productTypeHandle'] ?? '');
+            if ($productTypeHandle !== '') {
+                $query->type($productTypeHandle);
+            }
+        }
+
         $dateFrom = $this->normalizeDateFilter($template->filters['dateFrom'] ?? null);
         $dateTo = $this->normalizeDateFilter($template->filters['dateTo'] ?? null);
         if (($dateFrom || $dateTo) && method_exists($query, 'dateCreated')) {
@@ -188,7 +215,7 @@ final class ExportService extends Component
         return $query;
     }
 
-    private function createRunRecord(ExportTemplate $template, int $userId): ExportRun
+    private function createRunRecord(ExportTemplate $template, ?int $userId): ExportRun
     {
         $record = new ExportRunRecord();
         $record->templateId = $template->id;
@@ -276,6 +303,66 @@ final class ExportService extends Component
         return $processed;
     }
 
+    private function streamXlsxExport(
+        mixed $query,
+        ExportTemplate $template,
+        string $filePath,
+        int $total,
+        ?callable $progressCallback = null
+    ): int {
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $fields = $template->getFieldsSorted();
+        $columnWidths = [];
+
+        foreach (array_values($fields) as $index => $field) {
+            $sheet->setCellValue($this->xlsxCellAddress($index + 1, 1), $field->columnLabel);
+            $columnWidths[$index] = $this->estimateColumnWidth($field->columnLabel);
+        }
+
+        $processed = 0;
+        $rowNumber = 2;
+
+        foreach ($query->batch($this->batchSize) as $elements) {
+            foreach ($elements as $element) {
+                $row = $this->buildRow($element, $fields, 'json');
+
+                foreach (array_values($row) as $index => $value) {
+                    if (is_array($value)) {
+                        $value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '';
+                    }
+
+                    $stringValue = (string)($value ?? '');
+                    $sheet->setCellValue($this->xlsxCellAddress($index + 1, $rowNumber), $stringValue);
+                    $columnWidths[$index] = max($columnWidths[$index] ?? 0, $this->estimateColumnWidth($stringValue));
+                }
+
+                $processed++;
+                $rowNumber++;
+            }
+
+            if ($progressCallback !== null) {
+                $progressCallback($processed, $total);
+            }
+        }
+
+        foreach (array_values($fields) as $index => $field) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($index + 1))
+                ->setWidth((float)min(max($columnWidths[$index] ?? 12, 12), 60));
+        }
+
+        $visibleColumnCount = count($fields);
+        for ($columnIndex = $visibleColumnCount + 1; $columnIndex <= 16384; $columnIndex++) {
+            $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($columnIndex))->setVisible(false);
+        }
+
+        (new Xlsx($spreadsheet))->save($filePath);
+        $spreadsheet->disconnectWorksheets();
+        unset($spreadsheet);
+
+        return $processed;
+    }
+
     /**
      * @param ExportField[] $fields
      * @return array<int, mixed>
@@ -301,6 +388,18 @@ final class ExportService extends Component
         }
 
         return $row;
+    }
+
+    private function xlsxCellAddress(int $columnIndex, int $rowNumber): string
+    {
+        return Coordinate::stringFromColumnIndex($columnIndex) . $rowNumber;
+    }
+
+    private function estimateColumnWidth(string $value): int
+    {
+        $length = function_exists('mb_strlen') ? mb_strlen($value) : strlen($value);
+
+        return $length + 2;
     }
 
     private function normalizeDateFilter(mixed $value): ?string

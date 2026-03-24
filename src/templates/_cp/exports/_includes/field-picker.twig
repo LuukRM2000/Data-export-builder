@@ -33,20 +33,23 @@
                 <span class="light">Rename and reorder before saving.</span>
             </div>
 
+            <div class="deb-preset-list hidden" data-preset-list></div>
+
             <div class="deb-selected-list" data-selected-fields>
                 {% for field in selectedFields %}
-                    <div class="deb-selected-row" data-selected-row data-field-path="{{ field.fieldPath }}">
-                        <div class="deb-selected-row__main">
+                    <div class="deb-selected-row" data-selected-row data-field-path="{{ field.fieldPath }}" draggable="true">
+                        <div class="deb-selected-row__main" draggable="true">
                             <input type="hidden" data-name="fieldPath" name="fields[{{ loop.index0 }}][fieldPath]" value="{{ field.fieldPath }}">
                             <input type="hidden" data-name="sortOrder" name="fields[{{ loop.index0 }}][sortOrder]" value="{{ field.sortOrder }}">
-                            <div class="deb-selected-path">{{ field.fieldPath }}</div>
-                            <label class="deb-selected-label">Export column title</label>
+                            <div class="deb-selected-path-wrap">
+                                <button type="button" class="deb-drag-handle" data-drag-handle draggable="true" aria-label="Drag to reorder" title="Drag to reorder">Drag</button>
+                                <div class="deb-selected-path">{{ field.fieldPath }}</div>
+                            </div>
+                            <label class="deb-selected-label" draggable="true">Export column title</label>
                             <input class="text fullwidth" type="text" data-name="columnLabel" name="fields[{{ loop.index0 }}][columnLabel]" value="{{ field.columnLabel }}" placeholder="Custom column title">
                         </div>
 
                         <div class="deb-selected-row__actions">
-                            <button type="button" class="btn small" data-move-up aria-label="Move up">Up</button>
-                            <button type="button" class="btn small" data-move-down aria-label="Move down">Down</button>
                             <button type="button" class="btn small" data-remove-field aria-label="Remove field">Remove</button>
                         </div>
                     </div>

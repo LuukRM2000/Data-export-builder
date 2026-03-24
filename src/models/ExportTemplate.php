@@ -28,7 +28,7 @@ final class ExportTemplate extends Model
             [['name', 'handle', 'elementType', 'format'], 'required'],
             [['name', 'handle'], 'string', 'max' => 255],
             [['elementType'], 'string', 'max' => 50],
-            [['format'], 'in', 'range' => ['csv', 'json']],
+            [['format'], 'in', 'range' => ['csv', 'json', 'xlsx']],
             [['creatorId'], 'integer'],
             [['filters', 'settings', 'fields'], 'safe'],
             ['handle', 'match', 'pattern' => '/^[a-zA-Z][a-zA-Z0-9_\\-]*$/'],

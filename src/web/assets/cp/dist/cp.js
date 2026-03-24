@@ -1,4 +1,99 @@
 (function () {
+    function initEditorTabs() {
+        const tabRoots = Array.from(document.querySelectorAll('[data-editor-tabs]'));
+
+        tabRoots.forEach(function (root) {
+            const triggers = Array.from(root.querySelectorAll('[data-editor-tab-trigger]'));
+            const hiddenInput = document.querySelector('#editorTab');
+
+            function setActiveTab(tabName) {
+                const availableTabs = triggers.map((trigger) => trigger.dataset.editorTabTrigger);
+                const nextTab = availableTabs.includes(tabName) ? tabName : (availableTabs[0] || 'setup');
+
+                triggers.forEach(function (trigger) {
+                    const isActive = trigger.dataset.editorTabTrigger === nextTab;
+                    trigger.classList.toggle('is-active', isActive);
+                    trigger.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+                });
+
+                document.querySelectorAll('[data-editor-tab-panel]').forEach(function (panel) {
+                    const isActive = panel.dataset.editorTabPanel === nextTab;
+                    panel.classList.toggle('hidden', !isActive);
+                });
+
+                if (hiddenInput) {
+                    hiddenInput.value = nextTab;
+                }
+            }
+
+            setActiveTab(hiddenInput?.value || 'setup');
+
+            triggers.forEach(function (trigger) {
+                trigger.addEventListener('click', function () {
+                    setActiveTab(trigger.dataset.editorTabTrigger || 'setup');
+                });
+            });
+        });
+    }
+
+    function initSettingsConditionals() {
+        const root = document.querySelector('[data-deb-settings]');
+        if (!root) {
+            return;
+        }
+
+        const scheduleEnabled = root.querySelector('#scheduleEnabled');
+        const scheduleFrequency = root.querySelector('#scheduleFrequency');
+        const emailRecipients = root.querySelector('#emailRecipients');
+        const webhookUrl = root.querySelector('#webhookUrl');
+        const remoteVolumeUid = root.querySelector('#remoteVolumeUid');
+
+        function getState() {
+            const frequency = scheduleFrequency ? scheduleFrequency.value : 'daily';
+
+            return {
+                scheduleEnabled: !!scheduleEnabled?.checked,
+                scheduleIsWeekly: frequency === 'weekly',
+                scheduleUsesHour: frequency !== 'hourly',
+                hasEmailRecipients: !!emailRecipients?.value.trim(),
+                hasWebhookUrl: !!webhookUrl?.value.trim(),
+                hasRemoteVolume: !!remoteVolumeUid?.value.trim()
+            };
+        }
+
+        function update() {
+            const state = getState();
+
+            root.querySelectorAll('[data-settings-conditional]').forEach(function (element) {
+                const requirements = (element.dataset.settingsConditional || '')
+                    .split(',')
+                    .map(function (value) {
+                        return value.trim();
+                    })
+                    .filter(Boolean);
+
+                const isVisible = requirements.every(function (requirement) {
+                    return !!state[requirement];
+                });
+
+                element.classList.toggle('hidden', !isVisible);
+            });
+        }
+
+        [scheduleEnabled, scheduleFrequency, emailRecipients, webhookUrl, remoteVolumeUid].forEach(function (field) {
+            if (!field) {
+                return;
+            }
+
+            field.addEventListener('change', update);
+            if (field.tagName === 'TEXTAREA' || field.tagName === 'INPUT') {
+                field.addEventListener('input', update);
+            }
+        });
+
+        update();
+    }
+
     function parseJson(value, fallback) {
         try {
             return JSON.parse(value || '');
@@ -28,12 +123,38 @@
         return a.localeCompare(b);
     }
 
+    function renderPresets(root) {
+        const presets = Array.isArray(root._payload?.presets) ? root._payload.presets : [];
+        const target = root.querySelector('[data-preset-list]');
+        if (!target) {
+            return;
+        }
+
+        if (!presets.length) {
+            target.classList.add('hidden');
+            target.innerHTML = '';
+            return;
+        }
+
+        target.classList.remove('hidden');
+        target.innerHTML = presets.map(function (preset, index) {
+            return '<button type="button" class="btn small" data-apply-preset="' + String(index) + '">' + escapeHtml(preset.label) + '</button>';
+        }).join('');
+    }
+
     function getSelectedRows(root) {
         return Array.from(root.querySelectorAll('[data-selected-row]'));
     }
 
     function getSelectedPaths(root) {
         return getSelectedRows(root).map((row) => row.dataset.fieldPath);
+    }
+
+    function clearDragState(root) {
+        getSelectedRows(root).forEach(function (row) {
+            row.classList.remove('is-dragging');
+            row.classList.remove('is-drop-target');
+        });
     }
 
     function renumberRows(root) {
@@ -55,17 +176,19 @@
         row.className = 'deb-selected-row';
         row.dataset.selectedRow = 'true';
         row.dataset.fieldPath = field.path;
+        row.draggable = true;
         row.innerHTML = [
             '<div class="deb-selected-row__main">',
             '<input type="hidden" data-name="fieldPath" value="' + escapeHtml(field.path) + '">',
             '<input type="hidden" data-name="sortOrder" value="0">',
+            '<div class="deb-selected-path-wrap">',
+            '<button type="button" class="deb-drag-handle" data-drag-handle draggable="true" aria-label="Drag to reorder" title="Drag to reorder">Drag</button>',
             '<div class="deb-selected-path">' + escapeHtml(field.path) + '</div>',
-            '<label class="deb-selected-label">Export column title</label>',
+            '</div>',
+            '<label class="deb-selected-label" draggable="true">Export column title</label>',
             '<input class="text fullwidth" type="text" data-name="columnLabel" value="' + escapeHtml(field.label) + '" placeholder="Custom column title">',
             '</div>',
             '<div class="deb-selected-row__actions">',
-            '<button type="button" class="btn small" data-move-up>Up</button>',
-            '<button type="button" class="btn small" data-move-down>Down</button>',
             '<button type="button" class="btn small" data-remove-field>Remove</button>',
             '</div>'
         ].join('');
@@ -201,14 +324,17 @@
                 syncFilterOptions(root);
                 renderAvailableFields(root);
                 updateFilterVisibility(root);
+                renderPresets(root);
             });
     }
 
     function initPicker(root) {
         root._payload = parseJson(root.dataset.initialPayload, { fields: [] });
+        let draggedRow = null;
         renumberRows(root);
         renderAvailableFields(root);
         updateFilterVisibility(root);
+        renderPresets(root);
 
         const elementSelect = document.querySelector(root.dataset.elementSelect || '');
         if (elementSelect) {
@@ -270,6 +396,22 @@
                 return;
             }
 
+            if (target.hasAttribute('data-apply-preset')) {
+                const preset = root._payload?.presets?.[Number(target.dataset.applyPreset)];
+                const selectedFields = root.querySelector('[data-selected-fields]');
+                if (!preset || !selectedFields) {
+                    return;
+                }
+
+                selectedFields.innerHTML = '';
+                preset.fields.forEach(function (field) {
+                    selectedFields.appendChild(createSelectedRow(field));
+                });
+                renumberRows(root);
+                renderAvailableFields(root);
+                return;
+            }
+
             const row = target.closest('[data-selected-row]');
             if (!row) {
                 return;
@@ -277,18 +419,70 @@
 
             if (target.hasAttribute('data-remove-field')) {
                 row.remove();
-            } else if (target.hasAttribute('data-move-up') && row.previousElementSibling) {
-                row.parentNode.insertBefore(row, row.previousElementSibling);
-            } else if (target.hasAttribute('data-move-down') && row.nextElementSibling) {
-                row.parentNode.insertBefore(row.nextElementSibling, row);
             }
 
             renumberRows(root);
             renderAvailableFields(root);
         });
+
+        root.addEventListener('dragstart', function (event) {
+            const row = event.target.closest('[data-selected-row]');
+            if (!row) {
+                return;
+            }
+
+            draggedRow = row;
+            row.classList.add('is-dragging');
+
+            if (event.dataTransfer) {
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', row.dataset.fieldPath || '');
+            }
+        });
+
+        root.addEventListener('dragover', function (event) {
+            const row = event.target.closest('[data-selected-row]');
+            if (!draggedRow || !row || row === draggedRow) {
+                return;
+            }
+
+            event.preventDefault();
+            clearDragState(root);
+            draggedRow.classList.add('is-dragging');
+            row.classList.add('is-drop-target');
+        });
+
+        root.addEventListener('drop', function (event) {
+            const row = event.target.closest('[data-selected-row]');
+            if (!draggedRow || !row || row === draggedRow) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const bounds = row.getBoundingClientRect();
+            const insertAfter = event.clientY > bounds.top + (bounds.height / 2);
+
+            if (insertAfter) {
+                row.parentNode.insertBefore(draggedRow, row.nextElementSibling);
+            } else {
+                row.parentNode.insertBefore(draggedRow, row);
+            }
+
+            clearDragState(root);
+            renumberRows(root);
+            renderAvailableFields(root);
+        });
+
+        root.addEventListener('dragend', function () {
+            draggedRow = null;
+            clearDragState(root);
+        });
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        initEditorTabs();
+        initSettingsConditionals();
         document.querySelectorAll('[data-deb-field-picker]').forEach(initPicker);
     });
 }());

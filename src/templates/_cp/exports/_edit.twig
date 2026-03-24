@@ -10,6 +10,9 @@
 {% set formId = template.filters.formId ?? '' %}
 {% set dateFrom = template.filters.dateFrom ?? '' %}
 {% set dateTo = template.filters.dateTo ?? '' %}
+{% set isProEdition = isProEdition ?? false %}
+{% set schedule = template.settings.schedule ?? {} %}
+{% set delivery = template.settings.delivery ?? {} %}
 
 {% block actionButton %}
     <a class="btn" href="{{ cpUrl('data-export-builder/exports') }}">Back to Exports</a>
@@ -22,6 +25,9 @@
                 {{ csrfInput() }}
                 {{ actionInput('data-export-builder/templates/save') }}
                 {{ hiddenInput('templateId', template.id) }}
+                {{ hiddenInput('editorTab', 'setup', {
+                    id: 'editorTab'
+                }) }}
 
                 {{ forms.textField({
                     first: true,
@@ -44,124 +50,343 @@
                     errors: template.getErrors('handle')
                 }) }}
 
-                <div class="deb-card">
-                    <div class="deb-card__header">
-                        <h2>Template Setup</h2>
-                        <p>Choose what this export targets and how it should run.</p>
+                {% if isProEdition %}
+                    <div class="deb-editor-nav" data-editor-tabs>
+                        <button type="button" class="deb-editor-nav__tab is-active" data-editor-tab-trigger="setup">Export</button>
+                        <button type="button" class="deb-editor-nav__tab" data-editor-tab-trigger="settings">Settings</button>
+                    </div>
+                {% endif %}
+
+                <div class="deb-editor-panel" data-editor-tab-panel="setup">
+                    <div class="deb-card">
+                        <div class="deb-card__header">
+                            <h2>Template Setup</h2>
+                            <p>Choose what this export targets and how it should run.</p>
+                        </div>
+
+                        <div class="deb-form-grid">
+                            {{ forms.selectField({
+                                label: 'Element Type',
+                                id: 'elementType',
+                                name: 'elementType',
+                                options: elementTypeOptions,
+                                value: template.elementType,
+                                instructions: 'Entries, users, categories, assets, and Commerce orders when available.'
+                            }) }}
+
+                            {{ forms.selectField({
+                                label: 'Output Format',
+                                id: 'format',
+                                name: 'format',
+                                options: [
+                                    { label: 'CSV', value: 'csv' },
+                                    { label: 'JSON', value: 'json' },
+                                    { label: 'XLSX', value: 'xlsx' }
+                                ],
+                                value: template.format,
+                                instructions: 'Choose CSV, JSON, or XLSX.'
+                            }) }}
+
+                            <div data-section-filter-row>
+                                {{ forms.selectField({
+                                    label: 'Section Filter',
+                                    id: 'sectionUid',
+                                    name: 'filters[sectionUid]',
+                                    options: fieldPayload.sections,
+                                    value: sectionUid,
+                                    instructions: 'Optional. Only applies to entry exports.'
+                                }) }}
+                            </div>
+
+                            <div data-form-filter-row>
+                                {{ forms.selectField({
+                                    label: fieldPayload.formLabel ?? 'Form',
+                                    id: 'formId',
+                                    name: 'filters[formId]',
+                                    options: fieldPayload.forms ?? [],
+                                    value: formId,
+                                    instructions: fieldPayload.formInstructions ?? 'Required for submission exports.'
+                                }) }}
+                            </div>
+
+                            <div data-site-filter-row>
+                                {{ forms.selectField({
+                                    label: 'Site Filter',
+                                    id: 'siteUid',
+                                    name: 'filters[siteUid]',
+                                    options: fieldPayload.sites,
+                                    value: siteUid,
+                                    instructions: 'Optional. Export from one site or all sites.'
+                                }) }}
+                            </div>
+
+                            <div class="field">
+                                <div class="heading">
+                                    <label id="dateFrom-label" for="dateFrom">Created From</label>
+                                </div>
+                                <div class="instructions">
+                                    <p>Optional. Filter by creation date.</p>
+                                </div>
+                                <div class="input">
+                                    <input
+                                        class="text fullwidth"
+                                        type="date"
+                                        id="dateFrom"
+                                        name="filters[dateFrom]"
+                                        value="{{ dateFrom }}"
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="field">
+                                <div class="heading">
+                                    <label id="dateTo-label" for="dateTo">Created To</label>
+                                </div>
+                                <div class="instructions">
+                                    <p>Optional. Leave blank to include all dates.</p>
+                                </div>
+                                <div class="input">
+                                    <input
+                                        class="text fullwidth"
+                                        type="date"
+                                        id="dateTo"
+                                        name="filters[dateTo]"
+                                        value="{{ dateTo }}"
+                                    >
+                                </div>
+                            </div>
+
+                            {{ forms.textField({
+                                label: 'Queue Threshold',
+                                id: 'queueThreshold',
+                                name: 'settings[queueThreshold]',
+                                value: queueThreshold,
+                                type: 'number',
+                                instructions: 'Exports above this row count are pushed to the Craft queue.'
+                            }) }}
+                        </div>
+
+                        <div class="buttons">
+                            <button type="submit" class="btn submit">Save Template</button>
+                        </div>
                     </div>
 
-                    <div class="deb-form-grid">
-                        {{ forms.selectField({
-                            label: 'Element Type',
-                            id: 'elementType',
-                            name: 'elementType',
-                            options: elementTypeOptions,
-                            value: template.elementType,
-                            instructions: 'Entries, users, categories, assets, and Commerce orders when available.'
-                        }) }}
+                    {% include 'data-export-builder/_cp/exports/_includes/field-picker' with {
+                        fieldPayload: fieldPayload,
+                        selectedFields: selectedFields
+                    } %}
 
-                        {{ forms.selectField({
-                            label: 'Output Format',
-                            id: 'format',
-                            name: 'format',
-                            options: [
-                                { label: 'CSV', value: 'csv' },
-                                { label: 'JSON', value: 'json' }
-                            ],
-                            value: template.format
-                        }) }}
+                    {% if template.getErrors('fields') %}
+                        <p class="error">{{ template.getFirstError('fields') }}</p>
+                    {% endif %}
+                </div>
 
-                        <div data-section-filter-row>
-                            {{ forms.selectField({
-                                label: 'Section Filter',
-                                id: 'sectionUid',
-                                name: 'filters[sectionUid]',
-                                options: fieldPayload.sections,
-                                value: sectionUid,
-                                instructions: 'Optional. Only applies to entry exports.'
-                            }) }}
+                {% if isProEdition %}
+                    <div class="deb-editor-panel hidden" data-editor-tab-panel="settings">
+                        <div class="deb-card" data-deb-settings>
+                            <div class="deb-card__header">
+                                <h2>Settings</h2>
+                                <p>Configure scheduling and delivery for this export.</p>
+                            </div>
+
+                            <div class="deb-stack">
+                                <section class="deb-card deb-card--subtle">
+                                    <div class="deb-card__header">
+                                        <h3>Automation</h3>
+                                        <p>Run this export on a schedule.</p>
+                                    </div>
+
+                                    <div class="deb-form-grid">
+                                        <div class="field">
+                                            <div class="heading">
+                                                <label>
+                                                    <input
+                                                        type="checkbox"
+                                                        id="scheduleEnabled"
+                                                        name="settings[schedule][enabled]"
+                                                        value="1"
+                                                        {% if schedule.enabled ?? false %} checked{% endif %}
+                                                    >
+                                                    Enable scheduled exports
+                                                </label>
+                                            </div>
+                                            <div class="instructions">
+                                                <p>Queue due exports with <code>php craft data-export-builder/scheduler/run</code>.</p>
+                                            </div>
+                                        </div>
+
+                                        <div data-settings-conditional="scheduleEnabled">
+                                            {{ forms.selectField({
+                                                label: 'Schedule Frequency',
+                                                id: 'scheduleFrequency',
+                                                name: 'settings[schedule][frequency]',
+                                                options: [
+                                                    { label: 'Hourly', value: 'hourly' },
+                                                    { label: 'Daily', value: 'daily' },
+                                                    { label: 'Weekly', value: 'weekly' }
+                                                ],
+                                                value: schedule.frequency ?? 'daily',
+                                                instructions: 'How often this export should run.'
+                                            }) }}
+                                        </div>
+
+                                        <div data-settings-conditional="scheduleEnabled,scheduleUsesHour">
+                                            {{ forms.textField({
+                                                label: 'Schedule Hour',
+                                                id: 'scheduleHour',
+                                                name: 'settings[schedule][hour]',
+                                                type: 'number',
+                                                min: 0,
+                                                max: 23,
+                                                value: schedule.hour ?? 2,
+                                                instructions: '24-hour format.'
+                                            }) }}
+                                        </div>
+
+                                        <div data-settings-conditional="scheduleEnabled">
+                                            {{ forms.textField({
+                                                label: 'Schedule Minute',
+                                                id: 'scheduleMinute',
+                                                name: 'settings[schedule][minute]',
+                                                type: 'number',
+                                                min: 0,
+                                                max: 59,
+                                                value: schedule.minute ?? 0,
+                                                instructions: 'Minute within the hour.'
+                                            }) }}
+                                        </div>
+
+                                        <div class="field" data-settings-conditional="scheduleEnabled,scheduleIsWeekly">
+                                            <div class="heading">
+                                                <label>Weekly Days</label>
+                                            </div>
+                                            <div class="instructions">
+                                                <p>Only used for weekly schedules.</p>
+                                            </div>
+                                            <div class="input deb-weekdays">
+                                                {% for day in [
+                                                    { value: 'mon', label: 'Mon' },
+                                                    { value: 'tue', label: 'Tue' },
+                                                    { value: 'wed', label: 'Wed' },
+                                                    { value: 'thu', label: 'Thu' },
+                                                    { value: 'fri', label: 'Fri' },
+                                                    { value: 'sat', label: 'Sat' },
+                                                    { value: 'sun', label: 'Sun' }
+                                                ] %}
+                                                    <label><input type="checkbox" name="settings[schedule][weekdays][]" value="{{ day.value }}"{% if day.value in (schedule.weekdays ?? []) %} checked{% endif %}> {{ day.label }}</label>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="deb-card deb-card--subtle">
+                                    <div class="deb-card__header">
+                                        <h3>Email Delivery</h3>
+                                        <p>Send completed exports as attachments.</p>
+                                    </div>
+
+                                    <div class="deb-form-grid">
+                                        <div>
+                                            {{ forms.textareaField({
+                                                label: 'Email Recipients',
+                                                id: 'emailRecipients',
+                                                name: 'settings[delivery][emailRecipients]',
+                                                value: (delivery.emailRecipients ?? [])|join("\n"),
+                                                rows: 4,
+                                                instructions: 'One address per line or comma-separated.'
+                                            }) }}
+                                        </div>
+
+                                        <div data-settings-conditional="hasEmailRecipients">
+                                            {{ forms.textField({
+                                                label: 'Email Subject',
+                                                id: 'emailSubject',
+                                                name: 'settings[delivery][emailSubject]',
+                                                value: delivery.emailSubject ?? '',
+                                                instructions: 'Used for delivery emails.'
+                                            }) }}
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="deb-card deb-card--subtle">
+                                    <div class="deb-card__header">
+                                        <h3>Webhook Delivery</h3>
+                                        <p>POST completed exports to an endpoint.</p>
+                                    </div>
+
+                                    <div class="deb-form-grid">
+                                        <div>
+                                            {{ forms.textField({
+                                                label: 'Webhook URL',
+                                                id: 'webhookUrl',
+                                                name: 'settings[delivery][webhookUrl]',
+                                                value: delivery.webhookUrl ?? '',
+                                                instructions: 'The endpoint that receives the export.'
+                                            }) }}
+                                        </div>
+
+                                        <div data-settings-conditional="hasWebhookUrl">
+                                            {{ forms.textField({
+                                                label: 'Webhook Secret',
+                                                id: 'webhookSecret',
+                                                name: 'settings[delivery][webhookSecret]',
+                                                value: delivery.webhookSecret ?? '',
+                                                instructions: 'Optional shared secret.'
+                                            }) }}
+                                        </div>
+                                    </div>
+                                </section>
+
+                                <section class="deb-card deb-card--subtle">
+                                    <div class="deb-card__header">
+                                        <h3>Remote Storage</h3>
+                                        <p>Archive exports in a Craft asset volume.</p>
+                                    </div>
+
+                                    <div class="deb-form-grid">
+                                        <div>
+                                            {{ forms.selectField({
+                                                label: 'Remote Storage Volume',
+                                                id: 'remoteVolumeUid',
+                                                name: 'settings[delivery][remoteVolumeUid]',
+                                                options: volumeOptions,
+                                                value: delivery.remoteVolumeUid ?? '',
+                                                instructions: 'Choose where exported files should be copied.'
+                                            }) }}
+                                        </div>
+
+                                        <div data-settings-conditional="hasRemoteVolume">
+                                            {{ forms.textField({
+                                                label: 'Remote Storage Subpath',
+                                                id: 'remoteSubpath',
+                                                name: 'settings[delivery][remoteSubpath]',
+                                                value: delivery.remoteSubpath ?? '',
+                                                instructions: 'Optional folder path inside the volume.'
+                                            }) }}
+                                        </div>
+
+                                        <div class="field" data-settings-conditional="hasRemoteVolume">
+                                            <div class="heading">
+                                                <label>
+                                                    <input type="checkbox" name="settings[delivery][keepLocalCopy]" value="1"{% if delivery.keepLocalCopy is not defined or delivery.keepLocalCopy %} checked{% endif %}>
+                                                    Keep local downloadable copy
+                                                </label>
+                                            </div>
+                                            <div class="instructions">
+                                                <p>Disable this only if the remote volume should be the system of record.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
                         </div>
 
-                        <div data-site-filter-row>
-                            {{ forms.selectField({
-                                label: 'Site Filter',
-                                id: 'siteUid',
-                                name: 'filters[siteUid]',
-                                options: fieldPayload.sites,
-                                value: siteUid,
-                                instructions: 'Optional. Export from one site or all sites.'
-                            }) }}
+                        <div class="buttons">
+                            <button type="submit" class="btn submit">Save Template</button>
                         </div>
-
-                        <div data-form-filter-row>
-                            {{ forms.selectField({
-                                label: fieldPayload.formLabel ?? 'Form',
-                                id: 'formId',
-                                name: 'filters[formId]',
-                                options: fieldPayload.forms ?? [],
-                                value: formId,
-                                instructions: fieldPayload.formInstructions ?? 'Required for submission exports.'
-                            }) }}
-                        </div>
-
-                        <div class="field">
-                            <div class="heading">
-                                <label id="dateFrom-label" for="dateFrom">Created From</label>
-                            </div>
-                            <div class="instructions">
-                                <p>Optional. Filter by creation date.</p>
-                            </div>
-                            <div class="input">
-                                <input
-                                    class="text fullwidth"
-                                    type="date"
-                                    id="dateFrom"
-                                    name="filters[dateFrom]"
-                                    value="{{ dateFrom }}"
-                                >
-                            </div>
-                        </div>
-
-                        <div class="field">
-                            <div class="heading">
-                                <label id="dateTo-label" for="dateTo">Created To</label>
-                            </div>
-                            <div class="instructions">
-                                <p>Optional. Leave blank to include all dates.</p>
-                            </div>
-                            <div class="input">
-                                <input
-                                    class="text fullwidth"
-                                    type="date"
-                                    id="dateTo"
-                                    name="filters[dateTo]"
-                                    value="{{ dateTo }}"
-                                >
-                            </div>
-                        </div>
-
-                        {{ forms.textField({
-                            label: 'Queue Threshold',
-                            id: 'queueThreshold',
-                            name: 'settings[queueThreshold]',
-                            value: queueThreshold,
-                            type: 'number',
-                            instructions: 'Exports above this row count are pushed to the Craft queue.'
-                        }) }}
                     </div>
-                </div>
-
-                <div class="buttons">
-                    <button type="submit" class="btn submit">Save Template</button>
-                </div>
-
-                {% include 'data-export-builder/_cp/exports/_includes/field-picker' with {
-                    fieldPayload: fieldPayload,
-                    selectedFields: selectedFields
-                } %}
-
-                {% if template.getErrors('fields') %}
-                    <p class="error">{{ template.getFirstError('fields') }}</p>
                 {% endif %}
 
             </form>
@@ -171,7 +396,7 @@
             <div class="deb-card">
                 <div class="deb-card__header">
                     <h2>Run Export</h2>
-                    <p>Save first, then run on demand. Larger datasets queue automatically.</p>
+                    <p>Save first, then run on demand. Larger datasets queue automatically and deliveries run after export generation.</p>
                 </div>
 
                 {% if template.id %}
@@ -181,6 +406,10 @@
                     </form>
                 {% else %}
                     <p class="light">Save this template to unlock export runs and download history.</p>
+                {% endif %}
+
+                {% if nextScheduledRun %}
+                    <p class="light">Next scheduled run: {{ nextScheduledRun|datetime('short') }}</p>
                 {% endif %}
             </div>
 

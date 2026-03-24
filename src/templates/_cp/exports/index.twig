@@ -21,11 +21,14 @@
                         <th>Element Type</th>
                         <th>Format</th>
                         <th>Last Run</th>
+                        <th>Schedule</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for template in templates %}
+                        {% set schedule = template.settings.schedule ?? {} %}
+                        {% set isScheduled = schedule.enabled ?? false %}
                         <tr>
                             <td>
                                 <a class="go" href="{{ cpUrl('data-export-builder/exports/' ~ template.id) }}">{{ template.name }}</a>
@@ -34,6 +37,7 @@
                             <td>{{ template.elementType|title }}</td>
                             <td><span class="status green"></span>{{ template.format|upper }}</td>
                             <td>{{ template.lastRunAt ? template.lastRunAt|datetime('short') : 'Never' }}</td>
+                            <td>{{ isScheduled ? (schedule.frequency ?? 'daily')|title : 'Manual' }}</td>
                             <td class="nowrap rightalign">
                                 <div class="deb-row-actions">
                                 <a class="btn small deb-btn deb-btn--edit" href="{{ cpUrl('data-export-builder/exports/' ~ template.id) }}">Edit</a>

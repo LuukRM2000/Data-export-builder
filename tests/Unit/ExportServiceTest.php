@@ -51,4 +51,12 @@ final class ExportServiceTest extends TestCase
         self::assertFalse($service->shouldQueueForCount($template, 100));
         self::assertTrue($service->shouldQueueForCount($template, 101));
     }
+
+    public function testXlsxMimeTypeIsSupported(): void
+    {
+        self::assertSame(
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            \Luremo\DataExportBuilder\helpers\ExportFileHelper::fileMimeType('xlsx')
+        );
+    }
 }

@@ -22,13 +22,26 @@
                         {% if run.rowCount is not null %}
                             <span class="light">{{ run.rowCount }} rows</span>
                         {% endif %}
+                        {% if run.storageType %}
+                            <span class="light">{{ run.storageType|title }}</span>
+                        {% endif %}
                     </div>
 
                     <div class="rightalign">
                         {% if run.status == 'completed' %}
-                            <a class="btn small" href="{{ cpUrl('data-export-builder/exports/' ~ template.id ~ '/download/' ~ run.id) }}">Download</a>
+                            {% if run.filePath %}
+                                <a class="btn small" href="{{ cpUrl('data-export-builder/exports/' ~ template.id ~ '/download/' ~ run.id) }}">Download</a>
+                            {% else %}
+                                <span class="light">Delivered remotely</span>
+                            {% endif %}
                         {% elseif run.status == 'failed' and run.errorMessage %}
-                            <span class="error">{{ run.errorMessage }}</span>
+                            <div class="deb-run-error">
+                                <span class="error">{{ run.errorMessage }}</span>
+                                <form method="post" action="{{ cpUrl('data-export-builder/exports/' ~ template.id ~ '/retry/' ~ run.id) }}">
+                                    {{ csrfInput() }}
+                                    <button type="submit" class="btn small">Retry</button>
+                                </form>
+                            </div>
                         {% else %}
                             <span class="light">Waiting</span>
                         {% endif %}

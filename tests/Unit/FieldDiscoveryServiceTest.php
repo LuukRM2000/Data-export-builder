@@ -15,6 +15,7 @@ final class FieldDiscoveryServiceTest extends TestCase
 
         $paths = $service->getEagerLoadPaths([
             'author.email',
+            'customer.email',
             'relatedArticles.title',
             'relatedArticles.slug',
             'matrixField.copy.heading',
@@ -23,7 +24,7 @@ final class FieldDiscoveryServiceTest extends TestCase
         ]);
 
         self::assertSame(
-            ['author', 'relatedArticles', 'matrixField'],
+            ['author', 'customer', 'relatedArticles', 'matrixField'],
             $paths
         );
     }

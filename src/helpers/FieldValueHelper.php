@@ -132,6 +132,13 @@ final class FieldValueHelper
                 return $context->getFieldValue($segment);
             }
 
+            if ($segment === 'fullName') {
+                $fallbackFullName = self::resolveFallbackFullName($context);
+                if ($fallbackFullName !== null) {
+                    return $fallbackFullName;
+                }
+            }
+
             foreach (self::elementGetterMap($context) as $key => $getter) {
                 if ($key === $segment) {
                     return $getter();
@@ -140,6 +147,13 @@ final class FieldValueHelper
         }
 
         if (is_object($context)) {
+            if ($segment === 'fullName') {
+                $fallbackFullName = self::resolveFallbackFullName($context);
+                if ($fallbackFullName !== null) {
+                    return $fallbackFullName;
+                }
+            }
+
             $getter = 'get' . ucfirst($segment);
             if (method_exists($context, $getter)) {
                 return $context->{$getter}();
@@ -173,6 +187,61 @@ final class FieldValueHelper
                 static fn(mixed $item): mixed => self::drillInto($item, $segment),
                 $context
             ));
+        }
+
+        return null;
+    }
+
+    private static function resolveFallbackFullName(object $context): ?string
+    {
+        $fullName = self::readObjectProperty($context, 'fullName');
+        if (is_string($fullName) && trim($fullName) !== '') {
+            return trim($fullName);
+        }
+
+        $firstName = self::readObjectProperty($context, 'firstName');
+        $lastName = self::readObjectProperty($context, 'lastName');
+        $combined = trim(implode(' ', array_filter([
+            is_string($firstName) ? trim($firstName) : '',
+            is_string($lastName) ? trim($lastName) : '',
+        ])));
+
+        if ($combined !== '') {
+            return $combined;
+        }
+
+        foreach (['friendlyName', 'username', 'email'] as $property) {
+            $value = self::readObjectProperty($context, $property);
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return null;
+    }
+
+    private static function readObjectProperty(object $context, string $property): mixed
+    {
+        $getter = 'get' . ucfirst($property);
+        if (method_exists($context, $getter)) {
+            try {
+                return $context->{$getter}();
+            } catch (\Throwable) {
+            }
+        }
+
+        if ($context instanceof BaseObject && $context->canGetProperty($property)) {
+            try {
+                return $context->{$property};
+            } catch (\Throwable) {
+            }
+        }
+
+        if (property_exists($context, $property)) {
+            try {
+                return $context->{$property};
+            } catch (\Throwable) {
+            }
         }
 
         return null;

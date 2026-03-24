@@ -16,6 +16,7 @@ use craft\fields\BaseRelationField;
 use craft\fields\Matrix;
 use Luremo\DataExportBuilder\helpers\CapabilityHelper;
 use Luremo\DataExportBuilder\helpers\FieldValueHelper;
+use Luremo\DataExportBuilder\Plugin;
 use verbb\formie\base\CosmeticField as FormieCosmeticField;
 use verbb\formie\base\FieldInterface as FormieFieldInterface;
 use verbb\formie\base\MultiNestedFieldInterface as FormieMultiNestedFieldInterface;
@@ -67,13 +68,14 @@ final class FieldDiscoveryService extends Component
         return [
             'elementType' => $elementType,
             'fields' => $this->discoverFields($elementType, $sectionUid, $onlyPopulated, $formId),
+            'presets' => Plugin::$plugin->get('presets')->getPresetsForElementType($elementType),
             'sections' => $elementType === 'entries' ? $this->getSectionOptions() : [],
             'sites' => $this->getSiteOptions(),
             'forms' => $supportsFormFilter ? $this->getProviderFormOptions($elementType) : [],
             'formLabel' => $supportsFormFilter ? $this->getProviderFormLabel($elementType) : 'Form',
             'formInstructions' => $supportsFormFilter ? $this->getProviderFormInstructions($elementType) : '',
             'supportsSectionFilter' => $elementType === 'entries',
-            'supportsSiteFilter' => in_array($elementType, ['entries', 'categories', 'tags', 'assets'], true),
+            'supportsSiteFilter' => in_array($elementType, ['entries', 'categories', 'tags', 'assets', CapabilityHelper::ELEMENT_TYPE_PRODUCTS, CapabilityHelper::ELEMENT_TYPE_VARIANTS], true),
             'supportsFormFilter' => $supportsFormFilter,
             'supportsPopulatedFilter' => $supportsPopulatedFilter,
             'onlyPopulated' => $supportsPopulatedFilter ? $onlyPopulated : false,
@@ -281,6 +283,19 @@ final class FieldDiscoveryService extends Component
                     ? Craft::$app->getFields()->getLayoutByType(\craft\commerce\elements\Order::class)
                     : null;
                 break;
+            case CapabilityHelper::ELEMENT_TYPE_PRODUCTS:
+                if (CapabilityHelper::isCommerceInstalled() && class_exists(\craft\commerce\Plugin::class)) {
+                    $productTypes = \craft\commerce\Plugin::getInstance()?->getProductTypes()->getAllProductTypes() ?? [];
+                    foreach ($productTypes as $productType) {
+                        $layouts[] = $productType->getFieldLayout();
+                    }
+                }
+                break;
+            case CapabilityHelper::ELEMENT_TYPE_VARIANTS:
+                $layouts[] = CapabilityHelper::isCommerceInstalled() && method_exists(Craft::$app->getFields(), 'getLayoutByType')
+                    ? Craft::$app->getFields()->getLayoutByType(\craft\commerce\elements\Variant::class)
+                    : null;
+                break;
             case CapabilityHelper::ELEMENT_TYPE_WHEELFORM_SUBMISSIONS:
             case CapabilityHelper::ELEMENT_TYPE_FORMIE_SUBMISSIONS:
                 break;
@@ -447,6 +462,58 @@ final class FieldDiscoveryService extends Component
                 ['path' => 'totalQty', 'label' => 'Total Quantity', 'group' => 'Order', 'type' => 'number'],
                 ['path' => 'dateOrdered', 'label' => 'Date Ordered', 'group' => 'Order', 'type' => 'date'],
                 ['path' => 'isCompleted', 'label' => 'Completed', 'group' => 'Order', 'type' => 'boolean'],
+                ['path' => 'site.handle', 'label' => 'Order Site Handle', 'group' => 'Meta', 'type' => 'text'],
+                ['path' => 'site.language', 'label' => 'Order Site Language', 'group' => 'Meta', 'type' => 'text'],
+                ['path' => 'customer', 'label' => 'Customer', 'group' => 'Customer', 'type' => 'relation'],
+                ['path' => 'customer.fullName', 'label' => 'Customer Full Name', 'group' => 'Customer', 'type' => 'relation'],
+                ['path' => 'customer.email', 'label' => 'Customer Email', 'group' => 'Customer', 'type' => 'relation'],
+                ['path' => 'customer.username', 'label' => 'Customer Username', 'group' => 'Customer', 'type' => 'relation'],
+                ['path' => 'billingAddress.fullName', 'label' => 'Billing Full Name', 'group' => 'Billing Address', 'type' => 'text'],
+                ['path' => 'billingAddress.organization', 'label' => 'Billing Organization', 'group' => 'Billing Address', 'type' => 'text'],
+                ['path' => 'billingAddress.addressLine1', 'label' => 'Billing Address Line 1', 'group' => 'Billing Address', 'type' => 'text'],
+                ['path' => 'billingAddress.addressLine2', 'label' => 'Billing Address Line 2', 'group' => 'Billing Address', 'type' => 'text'],
+                ['path' => 'billingAddress.locality', 'label' => 'Billing City', 'group' => 'Billing Address', 'type' => 'text'],
+                ['path' => 'billingAddress.administrativeArea', 'label' => 'Billing Region', 'group' => 'Billing Address', 'type' => 'text'],
+                ['path' => 'billingAddress.postalCode', 'label' => 'Billing Postal Code', 'group' => 'Billing Address', 'type' => 'text'],
+                ['path' => 'billingAddress.countryCode', 'label' => 'Billing Country Code', 'group' => 'Billing Address', 'type' => 'text'],
+                ['path' => 'shippingAddress.fullName', 'label' => 'Shipping Full Name', 'group' => 'Shipping Address', 'type' => 'text'],
+                ['path' => 'shippingAddress.organization', 'label' => 'Shipping Organization', 'group' => 'Shipping Address', 'type' => 'text'],
+                ['path' => 'shippingAddress.addressLine1', 'label' => 'Shipping Address Line 1', 'group' => 'Shipping Address', 'type' => 'text'],
+                ['path' => 'shippingAddress.addressLine2', 'label' => 'Shipping Address Line 2', 'group' => 'Shipping Address', 'type' => 'text'],
+                ['path' => 'shippingAddress.locality', 'label' => 'Shipping City', 'group' => 'Shipping Address', 'type' => 'text'],
+                ['path' => 'shippingAddress.administrativeArea', 'label' => 'Shipping Region', 'group' => 'Shipping Address', 'type' => 'text'],
+                ['path' => 'shippingAddress.postalCode', 'label' => 'Shipping Postal Code', 'group' => 'Shipping Address', 'type' => 'text'],
+                ['path' => 'shippingAddress.countryCode', 'label' => 'Shipping Country Code', 'group' => 'Shipping Address', 'type' => 'text'],
+            ]),
+            CapabilityHelper::ELEMENT_TYPE_PRODUCTS => array_merge($definitions, [
+                ['path' => 'title', 'label' => 'Title', 'group' => 'Product', 'type' => 'text'],
+                ['path' => 'slug', 'label' => 'Slug', 'group' => 'Product', 'type' => 'text'],
+                ['path' => 'uri', 'label' => 'URI', 'group' => 'Product', 'type' => 'text'],
+                ['path' => 'postDate', 'label' => 'Post Date', 'group' => 'Product', 'type' => 'date'],
+                ['path' => 'expiryDate', 'label' => 'Expiry Date', 'group' => 'Product', 'type' => 'date'],
+                ['path' => 'type.handle', 'label' => 'Product Type Handle', 'group' => 'Meta', 'type' => 'text'],
+                ['path' => 'type.name', 'label' => 'Product Type Name', 'group' => 'Meta', 'type' => 'text'],
+                ['path' => 'site.handle', 'label' => 'Site Handle', 'group' => 'Meta', 'type' => 'text'],
+                ['path' => 'defaultVariant.sku', 'label' => 'Default Variant SKU', 'group' => 'Variant', 'type' => 'text'],
+                ['path' => 'defaultVariant.price', 'label' => 'Default Variant Price', 'group' => 'Variant', 'type' => 'number'],
+                ['path' => 'defaultVariant.stock', 'label' => 'Default Variant Stock', 'group' => 'Variant', 'type' => 'number'],
+                ['path' => 'defaultVariant.isAvailable', 'label' => 'Default Variant Available', 'group' => 'Variant', 'type' => 'boolean'],
+            ]),
+            CapabilityHelper::ELEMENT_TYPE_VARIANTS => array_merge($definitions, [
+                ['path' => 'title', 'label' => 'Title', 'group' => 'Variant', 'type' => 'text'],
+                ['path' => 'sku', 'label' => 'SKU', 'group' => 'Variant', 'type' => 'text'],
+                ['path' => 'price', 'label' => 'Price', 'group' => 'Variant', 'type' => 'number'],
+                ['path' => 'stock', 'label' => 'Stock', 'group' => 'Variant', 'type' => 'number'],
+                ['path' => 'hasUnlimitedStock', 'label' => 'Unlimited Stock', 'group' => 'Variant', 'type' => 'boolean'],
+                ['path' => 'minQty', 'label' => 'Min Qty', 'group' => 'Variant', 'type' => 'number'],
+                ['path' => 'maxQty', 'label' => 'Max Qty', 'group' => 'Variant', 'type' => 'number'],
+                ['path' => 'isDefault', 'label' => 'Default Variant', 'group' => 'Variant', 'type' => 'boolean'],
+                ['path' => 'isAvailable', 'label' => 'Available', 'group' => 'Variant', 'type' => 'boolean'],
+                ['path' => 'site.handle', 'label' => 'Site Handle', 'group' => 'Meta', 'type' => 'text'],
+                ['path' => 'product.title', 'label' => 'Product Title', 'group' => 'Product', 'type' => 'text'],
+                ['path' => 'product.slug', 'label' => 'Product Slug', 'group' => 'Product', 'type' => 'text'],
+                ['path' => 'product.type.handle', 'label' => 'Product Type Handle', 'group' => 'Product', 'type' => 'text'],
+                ['path' => 'product.site.handle', 'label' => 'Product Site Handle', 'group' => 'Product', 'type' => 'text'],
             ]),
             default => $definitions,
         };

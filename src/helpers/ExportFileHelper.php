@@ -43,6 +43,7 @@ final class ExportFileHelper
     {
         return match ($format) {
             'json' => 'application/json',
+            'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
             default => 'text/csv',
         };
     }

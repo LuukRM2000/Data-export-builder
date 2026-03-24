@@ -6,7 +6,6 @@ namespace Luremo\DataExportBuilder\services;
 
 use Craft;
 use craft\base\Component;
-use craft\helpers\ArrayHelper;
 use DateTimeInterface;
 use Luremo\DataExportBuilder\models\ExportField;
 use Luremo\DataExportBuilder\models\ExportRun;
@@ -162,8 +161,16 @@ final class TemplateService extends Component
     public function createTemplateFromRequest(array $payload, ?ExportTemplate $template = null): ExportTemplate
     {
         $template ??= new ExportTemplate();
+        $existingSettings = $template->settings;
+        $settingsPayload = is_array($payload['settings'] ?? null) ? $payload['settings'] : [];
+        $schedulePayload = is_array($settingsPayload['schedule'] ?? null) ? $settingsPayload['schedule'] : [];
+        $deliveryPayload = is_array($settingsPayload['delivery'] ?? null) ? $settingsPayload['delivery'] : [];
+        $scheduleFrequency = in_array(($schedulePayload['frequency'] ?? 'daily'), ['hourly', 'daily', 'weekly'], true)
+            ? (string)($schedulePayload['frequency'] ?? 'daily')
+            : 'daily';
         $template->name = trim((string)($payload['name'] ?? ''));
-        $template->handle = $this->generateHandle((string)($payload['handle'] ?? $template->name));
+        $requestedHandle = trim((string)($payload['handle'] ?? ''));
+        $template->handle = $this->generateHandle($requestedHandle !== '' ? $requestedHandle : $template->name);
         $template->elementType = (string)($payload['elementType'] ?? 'entries');
         $template->format = (string)($payload['format'] ?? 'csv');
         $template->filters = [
@@ -174,7 +181,24 @@ final class TemplateService extends Component
             'dateTo' => $this->normalizeDateInput($payload['filters']['dateTo'] ?? null),
         ];
         $template->settings = [
-            'queueThreshold' => (int)($payload['settings']['queueThreshold'] ?? 1000),
+            'queueThreshold' => (int)($settingsPayload['queueThreshold'] ?? 1000),
+            'schedule' => [
+                'enabled' => !empty($schedulePayload['enabled']),
+                'frequency' => $scheduleFrequency,
+                'hour' => max(0, min(23, (int)($schedulePayload['hour'] ?? 2))),
+                'minute' => max(0, min(59, (int)($schedulePayload['minute'] ?? 0))),
+                'weekdays' => $this->normalizeWeekdays($schedulePayload['weekdays'] ?? []),
+                'lastScheduledAt' => $existingSettings['schedule']['lastScheduledAt'] ?? null,
+            ],
+            'delivery' => [
+                'emailRecipients' => $this->normalizeStringList($deliveryPayload['emailRecipients'] ?? []),
+                'emailSubject' => trim((string)($deliveryPayload['emailSubject'] ?? '')),
+                'webhookUrl' => trim((string)($deliveryPayload['webhookUrl'] ?? '')),
+                'webhookSecret' => trim((string)($deliveryPayload['webhookSecret'] ?? '')),
+                'remoteVolumeUid' => trim((string)($deliveryPayload['remoteVolumeUid'] ?? '')),
+                'remoteSubpath' => trim((string)($deliveryPayload['remoteSubpath'] ?? '')),
+                'keepLocalCopy' => !array_key_exists('keepLocalCopy', $deliveryPayload) || (bool)$deliveryPayload['keepLocalCopy'],
+            ],
         ];
         $template->fields = $this->hydrateFieldsFromRequest($payload['fields'] ?? []);
 
@@ -184,6 +208,11 @@ final class TemplateService extends Component
     public function touchLastRun(int $templateId, string $timestamp): void
     {
         ExportTemplateRecord::updateAll(['lastRunAt' => $timestamp], ['id' => $templateId]);
+    }
+
+    public function updateTemplateSettings(int $templateId, array $settings): void
+    {
+        ExportTemplateRecord::updateAll(['settingsJson' => $settings], ['id' => $templateId]);
     }
 
     /**
@@ -200,9 +229,13 @@ final class TemplateService extends Component
                 continue;
             }
 
+            $pathSegments = explode('.', $fieldPath);
+            $defaultColumnLabel = (string)(end($pathSegments) ?: $fieldPath);
+            $columnLabel = trim((string)($field['columnLabel'] ?? ''));
+
             $models[] = new ExportField([
                 'fieldPath' => $fieldPath,
-                'columnLabel' => trim((string)($field['columnLabel'] ?? ArrayHelper::last(explode('.', $fieldPath)) ?: $fieldPath)),
+                'columnLabel' => $columnLabel !== '' ? $columnLabel : $defaultColumnLabel,
                 'sortOrder' => (int)($field['sortOrder'] ?? ($index + 1)),
                 'settings' => is_array($field['settings'] ?? null) ? $field['settings'] : [],
             ]);
@@ -364,5 +397,31 @@ final class TemplateService extends Component
         }
 
         return is_numeric($value) ? (int)$value : null;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function normalizeStringList(mixed $value): array
+    {
+        $values = is_array($value)
+            ? $value
+            : (preg_split('/[\r\n,]+/', trim((string)$value)) ?: []);
+
+        return array_values(array_filter(array_map(
+            static fn(mixed $item): string => trim((string)$item),
+            $values
+        ), static fn(string $item): bool => $item !== ''));
+    }
+
+    /**
+     * @return string[]
+     */
+    private function normalizeWeekdays(mixed $value): array
+    {
+        return array_values(array_filter(array_map(
+            static fn(mixed $item): string => strtolower(trim((string)$item)),
+            is_array($value) ? $value : []
+        ), static fn(string $item): bool => in_array($item, ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], true)));
     }
 }

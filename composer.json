@@ -1,6 +1,6 @@
 {
     "name": "luremo/craft-data-export-builder",
-    "description": "A visual export builder for Craft CMS that lets teams create reusable CSV and JSON exports from the Control Panel.",
+    "description": "Reusable CSV, JSON, and XLSX exports for Craft CMS teams that need reporting, migrations, and operational handoffs without custom scripts.",
     "type": "craft-plugin",
     "license": "proprietary",
     "version": "1.0.0",
@@ -36,13 +36,13 @@
         }
     },
     "scripts": {
-        "test": "phpunit --colors=always"
+        "test": "vendor/bin/phpunit --colors=always"
     },
     "extra": {
         "name": "Data Export Builder",
         "handle": "data-export-builder",
         "class": "Luremo\\DataExportBuilder\\Plugin",
-        "description": "Build reusable CSV and JSON exports for Craft CMS without custom templates or one-off scripts.",
+        "description": "Build reusable CSV, JSON, and XLSX exports for Craft CMS without custom templates or one-off scripts.",
         "developer": "Luremo",
         "developerUrl": "https://github.com/LuukRM2000",
         "documentationUrl": "https://github.com/LuukRM2000/Data-export-builder#readme",
@@ -52,7 +52,8 @@
     "config": {
         "sort-packages": true,
         "allow-plugins": {
-            "craftcms/plugin-installer": true
+            "craftcms/plugin-installer": true,
+            "yiisoft/yii2-composer": true
         }
     }
 }

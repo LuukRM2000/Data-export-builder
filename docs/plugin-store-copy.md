@@ -2,23 +2,26 @@
 
 ## Short Description
 
-Create reusable CSV and JSON exports for Craft CMS without custom Twig templates or project-specific scripts.
+Reusable CSV, JSON, and XLSX exports for Craft CMS teams that need reporting, migrations, and operational handoffs without custom scripts.
 
 ## Long Description
 
-Data Export Builder gives Craft CMS teams a clean Control Panel workflow for recurring export jobs.
+Data Export Builder gives Craft CMS teams a Control Panel workflow for recurring exports.
 
-Instead of rebuilding export templates for every ERP handoff, finance request, CRM import, migration, or client reporting job, teams can create reusable export templates once and run them whenever needed.
+Instead of rebuilding one-off export templates for every reporting request, migration, Commerce handoff, or operational task, teams can create a reusable export template once and run it whenever needed.
 
 ### Core value
 
-- choose entries, users, categories, assets, or Commerce orders
+- export entries, users, categories, tags, and assets
+- export Commerce orders, products, and variants in Pro
 - discover native fields, custom fields, relation paths, and practical Matrix paths
 - rename columns and control output order
-- apply section, site, and created-date filters
-- export to CSV or JSON
-- queue larger exports safely
+- apply section, site, form, and created-date filters where supported
+- export to CSV, JSON, or XLSX
+- run smaller exports immediately and queue larger exports safely
 - download completed files later from run history
+- schedule recurring exports in Pro
+- deliver exports by email, webhook, or Craft asset volume in Pro
 
 ### Best-fit buyers
 
@@ -29,7 +32,14 @@ Instead of rebuilding export templates for every ERP handoff, finance request, C
 
 ### Positioning
 
-This is not an integration platform. It is a focused workflow plugin that replaces repeated export scaffolding with a reliable, reusable Control Panel tool.
+This is not a BI suite or integration platform. It is a focused export workflow plugin that replaces repeated export scaffolding with a reliable, reusable Control Panel tool.
+
+### Why teams buy it
+
+- it removes repeated custom export work that clients still expect to happen quickly
+- it gives non-developers a reusable export workflow inside the Control Panel
+- it reduces delivery risk for migrations, reporting requests, and Commerce operations
+- it turns export setup from project-specific code into a reusable productized process
 
 ### Screenshot Suggestions
 
@@ -37,3 +47,11 @@ This is not an integration platform. It is a focused workflow plugin that replac
 2. Field picker and selected columns in the template builder
 3. Run history with queued, completed, and failed states
 4. Commerce order export template for Pro edition
+
+### Trust signals required before release
+
+- real support inbox
+- final screenshots
+- final commercial license / EULA
+- verified Craft 5 compatibility notes
+- clear edition comparison on the Plugin Store page

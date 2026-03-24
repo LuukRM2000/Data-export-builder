@@ -13,6 +13,17 @@
 {% set isProEdition = isProEdition ?? false %}
 {% set schedule = template.settings.schedule ?? {} %}
 {% set delivery = template.settings.delivery ?? {} %}
+{% set formatOptions = isProEdition
+    ? [
+        { label: 'CSV', value: 'csv' },
+        { label: 'JSON', value: 'json' },
+        { label: 'XLSX', value: 'xlsx' }
+    ]
+    : [
+        { label: 'CSV', value: 'csv' },
+        { label: 'JSON', value: 'json' }
+    ]
+%}
 
 {% block actionButton %}
     <a class="btn" href="{{ cpUrl('data-export-builder/exports') }}">Back to Exports</a>
@@ -71,20 +82,18 @@
                                 name: 'elementType',
                                 options: elementTypeOptions,
                                 value: template.elementType,
-                                instructions: 'Entries, users, categories, assets, and Commerce orders when available.'
+                                instructions: 'Entries, users, categories, assets, and Commerce orders when available.',
+                                errors: template.getErrors('elementType')
                             }) }}
 
                             {{ forms.selectField({
                                 label: 'Output Format',
                                 id: 'format',
                                 name: 'format',
-                                options: [
-                                    { label: 'CSV', value: 'csv' },
-                                    { label: 'JSON', value: 'json' },
-                                    { label: 'XLSX', value: 'xlsx' }
-                                ],
+                                options: formatOptions,
                                 value: template.format,
-                                instructions: 'Choose CSV, JSON, or XLSX.'
+                                instructions: isProEdition ? 'Choose CSV, JSON, or XLSX.' : 'CSV and JSON are included in Standard. Upgrade to Pro for XLSX.',
+                                errors: template.getErrors('format')
                             }) }}
 
                             <div data-section-filter-row>
@@ -162,13 +171,21 @@
                                 name: 'settings[queueThreshold]',
                                 value: queueThreshold,
                                 type: 'number',
-                                instructions: 'Exports above this row count are pushed to the Craft queue.'
+                                instructions: isProEdition ? 'Exports above this row count are pushed to the Craft queue.' : 'Standard uses a fixed queue threshold of 1000 rows. Upgrade to Pro for custom queue thresholds.',
+                                disabled: not isProEdition,
+                                errors: template.getErrors('settings')
                             }) }}
                         </div>
 
                         <div class="buttons">
                             <button type="submit" class="btn submit">Save Template</button>
                         </div>
+
+                        {% if not isProEdition %}
+                            <div class="readable light">
+                                <p><strong>Pro unlocks:</strong> XLSX exports, custom queue thresholds, scheduled runs, email delivery, webhook delivery, volume delivery, and Commerce export workflows.</p>
+                            </div>
+                        {% endif %}
                     </div>
 
                     {% include 'data-export-builder/_cp/exports/_includes/field-picker' with {
@@ -180,6 +197,24 @@
                         <p class="error">{{ template.getFirstError('fields') }}</p>
                     {% endif %}
                 </div>
+
+                {% if not isProEdition %}
+                    <div class="deb-card">
+                        <div class="deb-card__header">
+                            <h2>Pro Workflows</h2>
+                            <p>Upgrade when exports move from ad hoc reporting to operational delivery.</p>
+                        </div>
+
+                        <div class="readable">
+                            <p>Pro is designed for teams that need automated exports, delivery to downstream systems, Commerce data movement, and tighter control over queue behavior.</p>
+                            <p>Standard is for reusable manual exports. Pro is for workflows that need to run reliably without manual intervention.</p>
+                        </div>
+
+                        {% if template.getErrors('settings') %}
+                            <p class="error">{{ template.getFirstError('settings') }}</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
 
                 {% if isProEdition %}
                     <div class="deb-editor-panel hidden" data-editor-tab-panel="settings">

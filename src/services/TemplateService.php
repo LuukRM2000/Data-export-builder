@@ -7,6 +7,7 @@ namespace Luremo\DataExportBuilder\services;
 use Craft;
 use craft\base\Component;
 use DateTimeInterface;
+use Luremo\DataExportBuilder\helpers\CapabilityHelper;
 use Luremo\DataExportBuilder\models\ExportField;
 use Luremo\DataExportBuilder\models\ExportRun;
 use Luremo\DataExportBuilder\models\ExportTemplate;
@@ -17,6 +18,8 @@ use yii\base\Exception;
 
 final class TemplateService extends Component
 {
+    private const STANDARD_QUEUE_THRESHOLD = 1000;
+
     /**
      * @return ExportTemplate[]
      */
@@ -86,6 +89,10 @@ final class TemplateService extends Component
             }
         }
 
+        if (!$this->validateEditionAccess($template)) {
+            return false;
+        }
+
         $existing = ExportTemplateRecord::find()->where(['handle' => $template->handle])->one();
         if ($existing !== null && (int)$existing->id !== (int)$template->id) {
             $template->addError('handle', 'Handle must be unique.');
@@ -125,6 +132,41 @@ final class TemplateService extends Component
             $field->templateId = $template->id;
             $field->sortOrder = $sortOrder + 1;
             $field->uid = $fieldRecord->uid;
+        }
+
+        return true;
+    }
+
+    private function validateEditionAccess(ExportTemplate $template): bool
+    {
+        if (!CapabilityHelper::supportsElementTypeHandle($template->elementType)) {
+            $template->addError('elementType', 'This export type requires the Pro edition.');
+
+            return false;
+        }
+
+        if (!CapabilityHelper::supportsFormat($template->format)) {
+            $template->addError('format', 'XLSX exports require the Pro edition.');
+
+            return false;
+        }
+
+        if (!$this->isQueueThresholdAllowed($template->settings) && !CapabilityHelper::hasFeature(CapabilityHelper::FEATURE_ADVANCED_QUEUE)) {
+            $template->addError('settings', 'Custom queue thresholds require the Pro edition.');
+
+            return false;
+        }
+
+        if ($this->usesScheduling($template->settings) && !CapabilityHelper::hasFeature(CapabilityHelper::FEATURE_SCHEDULES)) {
+            $template->addError('settings', 'Scheduled exports require the Pro edition.');
+
+            return false;
+        }
+
+        if ($this->usesDelivery($template->settings) && !CapabilityHelper::hasFeature(CapabilityHelper::FEATURE_DELIVERY)) {
+            $template->addError('settings', 'Email, webhook, and volume delivery require the Pro edition.');
+
+            return false;
         }
 
         return true;
@@ -244,6 +286,28 @@ final class TemplateService extends Component
         usort($models, static fn(ExportField $a, ExportField $b): int => $a->sortOrder <=> $b->sortOrder);
 
         return $models;
+    }
+
+    private function isQueueThresholdAllowed(array $settings): bool
+    {
+        return (int)($settings['queueThreshold'] ?? self::STANDARD_QUEUE_THRESHOLD) === self::STANDARD_QUEUE_THRESHOLD;
+    }
+
+    private function usesScheduling(array $settings): bool
+    {
+        return !empty($settings['schedule']['enabled']);
+    }
+
+    private function usesDelivery(array $settings): bool
+    {
+        $delivery = is_array($settings['delivery'] ?? null) ? $settings['delivery'] : [];
+
+        return trim((string)($delivery['webhookUrl'] ?? '')) !== ''
+            || trim((string)($delivery['remoteVolumeUid'] ?? '')) !== ''
+            || trim((string)($delivery['remoteSubpath'] ?? '')) !== ''
+            || trim((string)($delivery['emailSubject'] ?? '')) !== ''
+            || trim((string)($delivery['webhookSecret'] ?? '')) !== ''
+            || array_filter(is_array($delivery['emailRecipients'] ?? null) ? $delivery['emailRecipients'] : []);
     }
 
     private function buildTemplateModel(ExportTemplateRecord $record, bool $includeFields = true): ExportTemplate

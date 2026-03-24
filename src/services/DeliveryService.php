@@ -11,6 +11,7 @@ use craft\helpers\FileHelper;
 use craft\models\VolumeFolder;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
+use Luremo\DataExportBuilder\helpers\CapabilityHelper;
 use Luremo\DataExportBuilder\models\ExportRun;
 use Luremo\DataExportBuilder\models\ExportTemplate;
 use yii\base\Exception;
@@ -67,6 +68,10 @@ final class DeliveryService extends Component
             return ['storageType' => 'local', 'keepLocalCopy' => true];
         }
 
+        if ($this->hasConfiguredDelivery($settings) && !CapabilityHelper::hasFeature(CapabilityHelper::FEATURE_DELIVERY)) {
+            throw new Exception('Email, webhook, and volume delivery require the Pro edition.');
+        }
+
         $storageType = 'local';
 
         if ($settings['emailRecipients'] !== []) {
@@ -86,6 +91,19 @@ final class DeliveryService extends Component
             'storageType' => $storageType,
             'keepLocalCopy' => $settings['keepLocalCopy'] || $storageType === 'local',
         ];
+    }
+
+    /**
+     * @param array{emailRecipients:array<int,string>,emailSubject:string,webhookUrl:string,webhookSecret:string,remoteVolumeUid:string,remoteSubpath:string,keepLocalCopy:bool} $settings
+     */
+    private function hasConfiguredDelivery(array $settings): bool
+    {
+        return $settings['emailRecipients'] !== []
+            || $settings['emailSubject'] !== ''
+            || $settings['webhookUrl'] !== ''
+            || $settings['webhookSecret'] !== ''
+            || $settings['remoteVolumeUid'] !== ''
+            || $settings['remoteSubpath'] !== '';
     }
 
     /**

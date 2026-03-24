@@ -16,6 +16,9 @@ final class CapabilityHelper
 {
     public const FEATURE_COMMERCE_ORDERS = 'commerceOrders';
     public const FEATURE_ADVANCED_QUEUE = 'advancedQueue';
+    public const FEATURE_XLSX = 'xlsx';
+    public const FEATURE_SCHEDULES = 'schedules';
+    public const FEATURE_DELIVERY = 'delivery';
     public const ELEMENT_TYPE_WHEELFORM_SUBMISSIONS = 'wheelform-submissions';
     public const ELEMENT_TYPE_FORMIE_SUBMISSIONS = 'formie-submissions';
     public const ELEMENT_TYPE_PRODUCTS = 'products';
@@ -60,10 +63,32 @@ final class CapabilityHelper
 
     public static function hasFeature(string $feature): bool
     {
+        return self::editionHasFeature(self::getEdition(), $feature);
+    }
+
+    public static function editionHasFeature(string $edition, string $feature): bool
+    {
         return match ($feature) {
             self::FEATURE_COMMERCE_ORDERS,
-            self::FEATURE_ADVANCED_QUEUE => self::isProEdition(),
+            self::FEATURE_ADVANCED_QUEUE,
+            self::FEATURE_XLSX,
+            self::FEATURE_SCHEDULES,
+            self::FEATURE_DELIVERY => $edition === Plugin::EDITION_PRO,
             default => true,
+        };
+    }
+
+    public static function supportsFormat(string $format): bool
+    {
+        return self::supportsFormatForEdition(self::getEdition(), $format);
+    }
+
+    public static function supportsFormatForEdition(string $edition, string $format): bool
+    {
+        return match ($format) {
+            'csv', 'json' => true,
+            'xlsx' => self::editionHasFeature($edition, self::FEATURE_XLSX),
+            default => false,
         };
     }
 

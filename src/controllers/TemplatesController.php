@@ -36,6 +36,7 @@ final class TemplatesController extends Controller
 
         return $this->renderTemplate('data-export-builder/_cp/exports/index', [
             'templates' => Plugin::$plugin->get('templates')->getAllTemplates(),
+            'isProEdition' => CapabilityHelper::isProEdition(),
         ]);
     }
 

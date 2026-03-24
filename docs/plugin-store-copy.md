@@ -17,7 +17,8 @@ Instead of rebuilding one-off export templates for every reporting request, migr
 - discover native fields, custom fields, relation paths, and practical Matrix paths
 - rename columns and control output order
 - apply section, site, form, and created-date filters where supported
-- export to CSV, JSON, or XLSX
+- export to CSV or JSON in Standard
+- export to XLSX in Pro
 - run smaller exports immediately and queue larger exports safely
 - download completed files later from run history
 - schedule recurring exports in Pro

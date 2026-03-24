@@ -22,7 +22,7 @@
 
 - entries, users, categories, assets
 - tags
-- CSV, JSON, and XLSX export
+- CSV and JSON export
 - saved templates
 - basic filters
 - immediate and queued export runs
@@ -31,9 +31,10 @@
 ## Pro Edition
 
 - Commerce order, product, and variant exports
+- XLSX exports
 - scheduled exports
 - remote delivery hooks
-- advanced queue and run handling
+- custom queue thresholds and advanced run handling
 - deeper relation and Matrix support
 - future transformations and automation features
 

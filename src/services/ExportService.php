@@ -60,6 +60,8 @@ final class ExportService extends Component
         }
 
         try {
+            $this->assertEditionRuntimeAccess($template);
+
             $runRecord->status = ExportRun::STATUS_RUNNING;
             $runRecord->startedAt = Db::prepareDateForDb(new \DateTimeImmutable('now', new \DateTimeZone('UTC')));
             $runRecord->errorMessage = null;
@@ -122,6 +124,23 @@ final class ExportService extends Component
 
         return Plugin::$plugin->get('templates')->getRunById((int)$runRecord->id)
             ?? throw new Exception('Unable to reload export run.');
+    }
+
+    private function assertEditionRuntimeAccess(ExportTemplate $template): void
+    {
+        if (!CapabilityHelper::supportsElementTypeHandle($template->elementType)) {
+            throw new Exception('This export type requires the Pro edition.');
+        }
+
+        if (!CapabilityHelper::supportsFormat($template->format)) {
+            throw new Exception('This export format requires the Pro edition.');
+        }
+
+        if ((int)($template->settings['queueThreshold'] ?? $this->defaultQueueThreshold) !== $this->defaultQueueThreshold
+            && !CapabilityHelper::hasFeature(CapabilityHelper::FEATURE_ADVANCED_QUEUE)
+        ) {
+            throw new Exception('Custom queue thresholds require the Pro edition.');
+        }
     }
 
     public function shouldQueueForCount(ExportTemplate $template, int $count): bool

@@ -66,9 +66,11 @@ Then grant the plugin permissions to the right user groups.
 
 ## Supported Output Formats
 
-- CSV
-- JSON
-- XLSX
+| Format | Standard | Pro |
+| --- | --- | --- |
+| CSV | Yes | Yes |
+| JSON | Yes | Yes |
+| XLSX | No | Yes |
 
 ## Quick Start
 

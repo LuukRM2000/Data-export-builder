@@ -9,6 +9,7 @@ use craft\base\Component;
 use DateInterval;
 use DateTimeImmutable;
 use DateTimeZone;
+use Luremo\DataExportBuilder\helpers\CapabilityHelper;
 use Luremo\DataExportBuilder\models\ExportTemplate;
 use Luremo\DataExportBuilder\Plugin;
 
@@ -39,6 +40,10 @@ final class ScheduleService extends Component
 
     public function isDue(ExportTemplate $template, ?DateTimeImmutable $now = null): bool
     {
+        if (!CapabilityHelper::hasFeature(CapabilityHelper::FEATURE_SCHEDULES)) {
+            return false;
+        }
+
         $settings = $this->normalizeSettings($template->settings);
         if (!$settings['enabled']) {
             return false;
@@ -59,6 +64,10 @@ final class ScheduleService extends Component
 
     public function getNextRunDate(ExportTemplate $template, ?DateTimeImmutable $from = null): ?DateTimeImmutable
     {
+        if (!CapabilityHelper::hasFeature(CapabilityHelper::FEATURE_SCHEDULES)) {
+            return null;
+        }
+
         $settings = $this->normalizeSettings($template->settings);
         if (!$settings['enabled']) {
             return null;
@@ -75,6 +84,10 @@ final class ScheduleService extends Component
 
     public function enqueueDueScheduledTemplates(): int
     {
+        if (!CapabilityHelper::hasFeature(CapabilityHelper::FEATURE_SCHEDULES)) {
+            return 0;
+        }
+
         $count = 0;
 
         foreach (Plugin::$plugin->get('templates')->getAllTemplates() as $template) {
